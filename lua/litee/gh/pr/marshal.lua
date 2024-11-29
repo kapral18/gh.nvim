@@ -46,8 +46,8 @@ local function marshal_thread_node(use_original)
             if node.thread['originalLine'] ~= vim.NIL then
                 line = node.thread['originalLine']
             end
-            if root_comment["originalCommit"] ~= vim.NIL then
             local root_comment = node['children'][1]['comment']
+            if root_comment['originalCommit'] ~= nil and root_comment['originalCommit']['oid'] ~= nil then
                 detail = string.sub(root_comment['originalCommit']['oid'], 1, 8)
                 detail = '@ ' .. detail
             end
@@ -72,8 +72,8 @@ local function marshal_thread_node(use_original)
             if node.thread['line'] ~= vim.NIL then
                 line = node.thread['line']
             end
-            if root_comment["originalCommit"] ~= vim.NIL then
             local root_comment = node['children'][1]['comment']
+            if root_comment['originalCommit'] ~= nil and root_comment['originalCommit']['oid'] ~= nil then
                 detail = string.sub(root_comment['originalCommit']['oid'], 1, 8)
                 detail = '@ ' .. detail
             end
