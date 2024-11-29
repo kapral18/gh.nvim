@@ -1,9 +1,9 @@
-local lib_notify    = require('litee.lib.notify')
+local lib_notify = require('litee.lib.notify')
 
-local ghcli         = require('litee.gh.ghcli')
-local gitcli        = require('litee.gh.gitcli')
-local comments      = require('litee.gh.pr.comments')
-local config        = require('litee.gh.config').config
+local ghcli = require('litee.gh.ghcli')
+local gitcli = require('litee.gh.gitcli')
+local comments = require('litee.gh.pr.comments')
+local config = require('litee.gh.config').config
 
 local M = {}
 
@@ -18,9 +18,9 @@ M.fence_map = {}
 local pull_state_proto = {
     -- the owning tab of the pull request. only a single pull request can be
     -- opened at a time and it owns a particular tab.
-    tab             = nil,
+    tab = nil,
     -- pull request number of the last valid pull request.
-    number          = nil,
+    number = nil,
     -- the PR object as returned by the Github API.
     pr_raw = nil,
     -- issue comments are comment nodes which live on the front page of a pull
@@ -60,7 +60,7 @@ local pull_state_proto = {
     -- as a way to indicate new items and paint a notification icon.
     notifications_by_id = nil,
     -- any checks to run for the current HEAD.
-    check_runs = {}
+    check_runs = {},
 }
 
 -- pull_state holds the state of our singleton pull request.
@@ -83,9 +83,9 @@ function M.reset_pull_state()
     M.pull_state = {
         -- the owning tab of the pull request. only a single pull request can be
         -- opened at a time and it owns a particular tab.
-        tab             = nil,
+        tab = nil,
         -- pull request number of the last valid pull request.
-        number          = nil,
+        number = nil,
         -- the PR object as returned by the Github API.
         pr_raw = nil,
         -- issue comments are comment nodes which live on the front page of a pull
@@ -125,7 +125,7 @@ function M.reset_pull_state()
         -- as a way to indicate new items and paint a notification icon.
         notifications_by_id = nil,
         -- any checks to run for the current HEAD.
-        check_runs = {}
+        check_runs = {},
     }
 end
 
@@ -161,19 +161,24 @@ end
 
 local spinner_state = -1
 local function spinner()
-    local spinners = {[0] = "⣾", [1] = "⣽", [2] = "⣻", [3] = "⢿", [4] = "⡿", [5] = "⣟", [6] = "⣯", [7] = "⣷"}
+    local spinners =
+        { [0] = '⣾', [1] = '⣽', [2] = '⣻', [3] = '⢿', [4] = '⡿', [5] = '⣟', [6] = '⣯', [7] = '⣷' }
     spinner_state = spinner_state + 1
-    return spinners[spinner_state%8]
+    return spinners[spinner_state % 8]
 end
 
 function M.get_check_runs(cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching checks", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_check_runs")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching checks', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_check_runs')
     ghcli.get_check_suites_async(M.pull_state.head, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch check suites: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch check suites: ' .. err, 7500, 'error')
+            end)
         end
-        if not check_fence("get_check_runs", fence_id) then
+        if not check_fence('get_check_runs', fence_id) then
             cb()
             return
         end
@@ -182,18 +187,20 @@ function M.get_check_runs(cb)
         if M.pull_state.check_runs == nil then
             M.pull_state.check_runs = {}
         end
-        if #data["check_suites"] > 0 then -- if we need to, go get the check runs for the suites we found.
-            for _, suite in ipairs(data["check_suites"]) do
-                ghcli.get_check_runs_by_suite(suite["id"], function(err1, runs)
+        if #data['check_suites'] > 0 then -- if we need to, go get the check runs for the suites we found.
+            for _, suite in ipairs(data['check_suites']) do
+                ghcli.get_check_runs_by_suite(suite['id'], function(err1, runs)
                     if err1 then
-                        vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch check runs: " .. err, 7500, "error") end)
+                        vim.schedule(function()
+                            lib_notify.notify_popup_with_timeout('Failed to fetch check runs: ' .. err, 7500, 'error')
+                        end)
                         return
                     end
-                    for _, run in ipairs(runs["check_runs"]) do
+                    for _, run in ipairs(runs['check_runs']) do
                         table.insert(check_runs, run)
                     end
                     suite_counter = suite_counter + 1
-                    if suite_counter == #data["check_suites"] then
+                    if suite_counter == #data['check_suites'] then
                         -- last suite was handled, swap our checks dict and call
                         -- cb()
                         M.pull_state.check_runs = check_runs
@@ -214,7 +221,7 @@ local function should_reset(old_commits, new_commits)
     -- at least one commit in the history has been rebased.
     for i, oc in ipairs(old_commits) do
         local nc = new_commits[i]
-        if oc["sha"] ~= nc["sha"] then
+        if oc['sha'] ~= nc['sha'] then
             return true
         end
     end
@@ -233,20 +240,24 @@ local function git_fetch()
     local ok, remote = gitcli.remote_exists(remote_url)
     if not ok then
         -- really shouldn't happen
-        lib_notify.notify_popup_with_timeout("New commits added, wanted to fetch but couldn't determine remote", 7500, "error")
+        lib_notify.notify_popup_with_timeout(
+            "New commits added, wanted to fetch but couldn't determine remote",
+            7500,
+            'error'
+        )
         return false
     end
     -- fetch the remote branch so the commits under review are locally accessible.
-    local head_branch = M.pull_state.pr_raw["head"]["ref"]
+    local head_branch = M.pull_state.pr_raw['head']['ref']
     local out = gitcli.fetch(remote, head_branch)
     if out == nil then
-        lib_notify.notify_popup_with_timeout("Failed to fetch remote branch.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Failed to fetch remote branch.', 7500, 'error')
         return
     end
-    local head_sha = M.pull_state.pr_raw["head"]["sha"]
+    local head_sha = M.pull_state.pr_raw['head']['sha']
     local out_head_sha = gitcli.fetch(remote, head_sha)
     if out_head_sha == nil then
-        lib_notify.notify_popup_with_timeout("Failed to fetch remote base commit.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Failed to fetch remote base commit.', 7500, 'error')
         return
     end
     return true
@@ -254,52 +265,73 @@ end
 
 local function git_reset()
     if gitcli.repo_dirty() then
-        lib_notify.notify_popup_with_timeout("Git history has changed, want to reset to remote but repo is dirty. Please stash changes and run GHRefreshPR", 7500, "error")
+        lib_notify.notify_popup_with_timeout(
+            'Git history has changed, want to reset to remote but repo is dirty. Please stash changes and run GHRefreshPR',
+            7500,
+            'error'
+        )
         return false
     end
     local remote_url = M.get_pr_remote_url()
     local ok, remote = gitcli.remote_exists(remote_url)
     if not ok then
         -- really shouldn't happen
-        lib_notify.notify_popup_with_timeout("Git history has changed, want to reset but couldn't identify remote", 7500, "error")
+        lib_notify.notify_popup_with_timeout(
+            "Git history has changed, want to reset but couldn't identify remote",
+            7500,
+            'error'
+        )
         return false
     end
-    local head_branch = M.pull_state.pr_raw["head"]["ref"]
+    local head_branch = M.pull_state.pr_raw['head']['ref']
     local out = gitcli.git_reset_hard(remote, head_branch)
     if out == nil then
-        lib_notify.notify_popup_with_timeout("Git history changed but failed to reset", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Git history changed but failed to reset', 7500, 'error')
         return false
     end
     return true
 end
 
 function M.get_commits_async(pull_number, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching commits", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_commits_async")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching commits', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_commits_async')
     ghcli.get_pull_commits_async(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch commits: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch commits: ' .. err, 7500, 'error')
+            end)
             return
         end
-        if not check_fence("get_commits_async", fence_id) then
+        if not check_fence('get_commits_async', fence_id) then
             cb()
             return
         end
 
-        if
-            M.pull_state.commits ~= nil and
-            #M.pull_state.commits ~= 0
-        then
+        if M.pull_state.commits ~= nil and #M.pull_state.commits ~= 0 then
             if should_reset(M.pull_state.commits, data) then
                 if not git_reset() then
                     return
                 end
-                vim.schedule(function () lib_notify.notify_popup_with_timeout("Git history has changed and repository reset to remote", 7500, "info") end)
+                vim.schedule(function()
+                    lib_notify.notify_popup_with_timeout(
+                        'Git history has changed and repository reset to remote',
+                        7500,
+                        'info'
+                    )
+                end)
             elseif should_fetch(M.pull_state.commits, data) then
                 if not git_fetch() then
                     return
                 end
-                vim.schedule(function () lib_notify.notify_popup_with_timeout("New commits added to pull request and fetched locally.", 7500, "info") end)
+                vim.schedule(function()
+                    lib_notify.notify_popup_with_timeout(
+                        'New commits added to pull request and fetched locally.',
+                        7500,
+                        'info'
+                    )
+                end)
             end
         end
 
@@ -309,26 +341,30 @@ function M.get_commits_async(pull_number, cb)
         for i, commit in ipairs(data) do
             -- final commit in array will be the HEAD.
             if i == #data then
-                M.pull_state.head = commit["sha"]
+                M.pull_state.head = commit['sha']
             end
-            M.pull_state.commits_by_sha[commit["sha"]] = commit
+            M.pull_state.commits_by_sha[commit['sha']] = commit
         end
         cb()
-
     end)
 end
 
 function M.get_review_threads_async(pull_number, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching review threads", "LTInfo"}}, false, {}) end)
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching review threads', 'LTInfo' } }, false, {})
+    end)
     ghcli.get_review_threads_async_paginated(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch review threads: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch review threads: ' .. err, 7500, 'error')
+            end)
             return
         end
 
         M.pull_state.review_threads_raw = data
 
-        local review_threads_by_id, review_threads_by_filename, _, review_thread_comments_by_id = comments.build_review_thread_trees(data, 2)
+        local review_threads_by_id, review_threads_by_filename, _, review_thread_comments_by_id =
+            comments.build_review_thread_trees(data, 2)
 
         if M.pull_state.notifications_by_id == nil then
             M.pull_state.notifications_by_id = {}
@@ -361,34 +397,33 @@ function M.get_review_threads_async(pull_number, cb)
             end
         end
 
-        M.pull_state.review_threads_by_id,
-            M.pull_state.review_threads_by_filename,
-                M.pull_state.review_thread_comments_by_id =
-                    review_threads_by_id, review_threads_by_filename, review_thread_comments_by_id
+        M.pull_state.review_threads_by_id, M.pull_state.review_threads_by_filename, M.pull_state.review_thread_comments_by_id =
+            review_threads_by_id, review_threads_by_filename, review_thread_comments_by_id
         cb()
     end)
 end
 
 function M.get_reviews_async(pull_number, username, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching reviews", "LTInfo"}}, false, {}) end)
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching reviews', 'LTInfo' } }, false, {})
+    end)
     ghcli.list_reviews_async(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch reviews: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch reviews: ' .. err, 7500, 'error')
+            end)
             return
         end
 
         M.pull_state.reviews_by_node_id = {}
         for _, r in ipairs(data) do
-            if
-                r["user"]["login"] == username and
-                r["state"] == "PENDING"
-            then
+            if r['user']['login'] == username and r['state'] == 'PENDING' then
                 M.pull_state.review = r
             end
             -- reviews of state commented show up in "Conversations" subtree,
             -- we don't need them here.
-            if r["state"] ~= "COMMENTED" then
-                M.pull_state.reviews_by_node_id[r["node_id"]] = r
+            if r['state'] ~= 'COMMENTED' then
+                M.pull_state.reviews_by_node_id[r['node_id']] = r
             end
         end
         cb()
@@ -396,15 +431,19 @@ function M.get_reviews_async(pull_number, username, cb)
 end
 
 function M.get_pull_issue_comments_async(pull_number, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching issue comments", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_pull_issue_comments_async")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching issue comments', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_pull_issue_comments_async')
     ghcli.get_pull_issue_comments_async_paginated(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch issue comments: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch issue comments: ' .. err, 7500, 'error')
+            end)
             return
         end
 
-        if not check_fence("get_pull_issue_comments_async", fence_id) then
+        if not check_fence('get_pull_issue_comments_async', fence_id) then
             cb()
             return
         end
@@ -432,22 +471,26 @@ function M.get_pull_issue_comments_async(pull_number, cb)
 end
 
 function M.get_pull_files_async(pull_number, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching pull request files", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_pull_files_async")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching pull request files', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_pull_files_async')
     ghcli.get_pull_files_async(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch pull request files: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch pull request files: ' .. err, 7500, 'error')
+            end)
             return
         end
 
-        if not check_fence("get_pull_files_async", fence_id) then
+        if not check_fence('get_pull_files_async', fence_id) then
             cb()
             return
         end
 
         M.pull_state.files_by_name = {}
         for _, f in ipairs(data) do
-            M.pull_state.files_by_name[f["filename"]] = f
+            M.pull_state.files_by_name[f['filename']] = f
         end
         cb()
     end)
@@ -455,41 +498,49 @@ end
 
 function M.get_pull_files_viewed_state_async(pull_number, cb)
     vim.schedule(function()
-        vim.api.nvim_echo({{spinner() .. " fetching pull request files viewed state", "LTInfo"}}, false, {})
+        vim.api.nvim_echo({ { spinner() .. ' fetching pull request files viewed state', 'LTInfo' } }, false, {})
     end)
 
-    local fence_id = add_fence("get_pull_files_viewed_state_async")
+    local fence_id = add_fence('get_pull_files_viewed_state_async')
     ghcli.get_pull_files_viewed_state_async(pull_number, function(err, data)
         if err then
-            vim.schedule(function ()
-                lib_notify.notify_popup_with_timeout("Failed to fetch pull request files viewed state: " .. err, 7500, "error")
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout(
+                    'Failed to fetch pull request files viewed state: ' .. err,
+                    7500,
+                    'error'
+                )
             end)
             return
         end
 
-        if not check_fence("get_pull_files_async", fence_id) then
+        if not check_fence('get_pull_files_async', fence_id) then
             cb()
             return
         end
 
-        local files = data.data.repository.pullRequest.files.edges;
+        local files = data.data.repository.pullRequest.files.edges
         for _, f in ipairs(files) do
-            M.pull_state.files_by_name[f.node["path"]].viewed_state = f.node["viewerViewedState"]
+            M.pull_state.files_by_name[f.node['path']].viewed_state = f.node['viewerViewedState']
         end
         cb()
     end)
 end
 
 function M.get_user_data_async(cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching pull request files", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_user_data_async")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching pull request files', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_user_data_async')
     ghcli.get_user_async(function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch GitHub user: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch GitHub user: ' .. err, 7500, 'error')
+            end)
             return
         end
 
-        if not check_fence("get_user_data_async", fence_id) then
+        if not check_fence('get_user_data_async', fence_id) then
             cb()
             return
         end
@@ -500,15 +551,19 @@ function M.get_user_data_async(cb)
 end
 
 function M.get_pr_data_async(pull_number, cb)
-    vim.schedule(function() vim.api.nvim_echo({{spinner() .. " fetching pull request", "LTInfo"}}, false, {}) end)
-    local fence_id = add_fence("get_pr_data_async")
+    vim.schedule(function()
+        vim.api.nvim_echo({ { spinner() .. ' fetching pull request', 'LTInfo' } }, false, {})
+    end)
+    local fence_id = add_fence('get_pr_data_async')
     ghcli.get_pull_async(pull_number, function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to fetch pull request: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to fetch pull request: ' .. err, 7500, 'error')
+            end)
             return
         end
 
-        if not check_fence("get_pr_data_async", fence_id) then
+        if not check_fence('get_pr_data_async', fence_id) then
             cb()
             return
         end
@@ -523,16 +578,16 @@ function M.get_pr_data_async(pull_number, cb)
 end
 
 function M.get_pr_remote_url()
-  local remote_url = ''
+    local remote_url = ''
 
-  local protocol = ghcli.get_git_protocol()
-  if protocol == 'https' then
-    remote_url = M.pull_state.pr_raw['head']['repo']['clone_url']
-  else
-    remote_url = M.pull_state.pr_raw['head']['repo']['ssh_url']
-  end
+    local protocol = ghcli.get_git_protocol()
+    if protocol == 'https' then
+        remote_url = M.pull_state.pr_raw['head']['repo']['clone_url']
+    else
+        remote_url = M.pull_state.pr_raw['head']['repo']['ssh_url']
+    end
 
-  return remote_url
+    return remote_url
 end
 
 -- WELCOME TO CALLBACK HELL.
@@ -548,15 +603,19 @@ function M.load_state_async(pull_number, on_load)
             M.get_pull_files_async(pull_number, function()
                 M.get_pull_files_viewed_state_async(pull_number, function()
                     M.get_pull_issue_comments_async(pull_number, function()
-                        M.get_reviews_async(pull_number, M.pull_state.user["login"], function()
+                        M.get_reviews_async(pull_number, M.pull_state.user['login'], function()
                             M.get_review_threads_async(pull_number, function()
                                 M.get_commits_async(pull_number, function()
-                                    M.get_check_runs(
-                                        function ()
-                                            vim.schedule(function() vim.api.nvim_echo({{spinner() .. " successfully fetched all PR state.", "LTSuccess"}}, false, {}) end)
-                                            vim.schedule(on_load)
-                                        end
-                                    )
+                                    M.get_check_runs(function()
+                                        vim.schedule(function()
+                                            vim.api.nvim_echo(
+                                                { { spinner() .. ' successfully fetched all PR state.', 'LTSuccess' } },
+                                                false,
+                                                {}
+                                            )
+                                        end)
+                                        vim.schedule(on_load)
+                                    end)
                                 end)
                             end)
                         end)

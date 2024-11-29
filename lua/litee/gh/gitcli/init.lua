@@ -3,10 +3,10 @@ local debug = require('litee.gh.debug')
 local function git_exec(cmd)
     local out = vim.fn.system(cmd)
     if vim.v.shell_error ~= 0 then
-        debug.log("[git] cmd: " .. vim.inspect(cmd) .. " out:\n" .. vim.inspect(out), "error")
+        debug.log('[git] cmd: ' .. vim.inspect(cmd) .. ' out:\n' .. vim.inspect(out), 'error')
         return nil
     end
-    debug.log("[git] cmd: " .. vim.inspect(cmd) .. " out:\n" .. vim.inspect(out), "info")
+    debug.log('[git] cmd: ' .. vim.inspect(cmd) .. ' out:\n' .. vim.inspect(out), 'info')
     return out
 end
 
@@ -68,7 +68,7 @@ function M.list_remotes()
     if out == nil then
         return nil
     end
-    return vim.fn.split(out, "\n")
+    return vim.fn.split(out, '\n')
 end
 
 function M.repo_dirty()
@@ -93,12 +93,12 @@ function M.remote_exists(remote_url)
     if bool == -1 then
         return false
     end
-    local lines = vim.fn.split(out, "\n")
-    local remote = ""
+    local lines = vim.fn.split(out, '\n')
+    local remote = ''
     for _, line in ipairs(lines) do
         bool = vim.fn.match(line, remote_url)
         if bool ~= -1 then
-            local idx = vim.fn.stridx(line, "\t", 0)
+            local idx = vim.fn.stridx(line, '\t', 0)
             remote = vim.fn.strpart(line, 0, idx)
             break
         end
@@ -107,7 +107,7 @@ function M.remote_exists(remote_url)
 end
 
 function M.remote_branch_exists(remote_url, branch)
-    local cmd = [[git ls-remote --heads ]] .. remote_url .. " " .. branch
+    local cmd = [[git ls-remote --heads ]] .. remote_url .. ' ' .. branch
     local out = git_exec(cmd)
     if out == nil then
         return nil
