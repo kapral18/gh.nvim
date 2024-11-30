@@ -1,13 +1,13 @@
-local lib_notify    = require('litee.lib.notify')
-local lib_util      = require('litee.lib.util')
-local lib_path      = require('litee.lib.util.path')
+local lib_notify = require('litee.lib.notify')
+local lib_util = require('litee.lib.util')
+local lib_path = require('litee.lib.util.path')
 
-local ghcli         = require('litee.gh.ghcli')
-local s             = require('litee.gh.pr.state')
-local reactions     = require('litee.gh.pr.reactions')
+local ghcli = require('litee.gh.ghcli')
+local s = require('litee.gh.pr.state')
+local reactions = require('litee.gh.pr.reactions')
 local reactions_map = require('litee.gh.pr.reactions').reaction_map
-local issues       = require('litee.gh.issues')
-local config       = require('litee.gh.config')
+local issues = require('litee.gh.issues')
+local config = require('litee.gh.config')
 
 local M = {}
 
@@ -27,7 +27,7 @@ local state = {
     editing_comment = nil,
     -- set when "create_comment()" is issue, holds the details needed to submit
     -- a new thread to the GH API when submit() is called.
-    creating_comment = nil
+    creating_comment = nil,
 }
 
 local function reset_state()
@@ -40,7 +40,7 @@ local function reset_state()
 end
 
 local symbols = {
-    tab = "  ",
+    tab = '  ',
 }
 
 -- parse out the line range and whether its a multiline comment associated
@@ -49,26 +49,26 @@ local function extract_thread_lines(thread)
     local start_line = nil
     local end_line = nil
     local multiline = false
-    if thread.thread["originalLine"] ~= vim.NIL then
-        start_line = thread.thread["originalStartLine"]
-        end_line = thread.thread["originalLine"]
+    if thread.thread['originalLine'] ~= vim.NIL then
+        start_line = thread.thread['originalStartLine']
+        end_line = thread.thread['originalLine']
         if start_line == vim.NIL then
             start_line = end_line
         else
             multiline = true
             end_line = end_line
         end
-        return {start_line-1, end_line, multiline}
-    elseif thread.thread["line"] ~= vim.NIL then
-        start_line = thread.thread["startLine"]
-        end_line = thread.thread["line"]
+        return { start_line - 1, end_line, multiline }
+    elseif thread.thread['line'] ~= vim.NIL then
+        start_line = thread.thread['startLine']
+        end_line = thread.thread['line']
         if start_line == vim.NIL then
             start_line = end_line
         else
             multiline = true
             end_line = end_line
         end
-        return {start_line-1, end_line, multiline}
+        return { start_line - 1, end_line, multiline }
     end
     return nil
 end
@@ -76,10 +76,10 @@ end
 -- extract rest_id from comment, you can get this from the last portion
 -- of url.
 local function comment_rest_id(comment)
-    local rest_id = ""
-    local sep = "_r"
-    for i in string.gmatch(comment["comment"]["url"], "([^"..sep.."]+)") do
-       rest_id = i
+    local rest_id = ''
+    local sep = '_r'
+    for i in string.gmatch(comment['comment']['url'], '([^' .. sep .. ']+)') do
+        rest_id = i
     end
     return rest_id
 end
@@ -91,18 +91,18 @@ local function extract_text()
         return
     end
     local lines = vim.api.nvim_buf_get_lines(state.buf, state.text_area_off, -1, false)
-    local body = vim.fn.join(lines, "\n")
+    local body = vim.fn.join(lines, '\n')
     return body, lines
 end
 
 -- namespace we'll use for extmarks that help us track comments.
-local ns = vim.api.nvim_create_namespace("thread_buffer")
-local hi_ns = vim.api.nvim_create_namespace("thread_buffer_highlights")
+local ns = vim.api.nvim_create_namespace('thread_buffer')
+local hi_ns = vim.api.nvim_create_namespace('thread_buffer_highlights')
 
 local function _win_settings_on()
     vim.api.nvim_win_set_option(0, 'winhighlight', 'NonText:Normal')
     vim.api.nvim_win_set_option(0, 'wrap', true)
-    vim.api.nvim_win_set_option(0, 'colorcolumn', "0")
+    vim.api.nvim_win_set_option(0, 'colorcolumn', '0')
 end
 
 -- in_editable_area is used as an auto command to flip the thread_buffer writable
@@ -123,19 +123,19 @@ local function setup_buffer(thread_id)
     -- see if we can reuse a buffer that currently exists.
     if state.buf ~= nil and vim.api.nvim_buf_is_valid(state.buf) then
         if thread_id ~= nil then
-            vim.api.nvim_buf_set_name(state.buf, "thread://" .. thread_id)
+            vim.api.nvim_buf_set_name(state.buf, 'thread://' .. thread_id)
         end
         return state.buf
     else
         state.buf = vim.api.nvim_create_buf(false, false)
         if state.buf == 0 then
-            vim.api.nvim_err_writeln("thread_convo: buffer create failed")
+            vim.api.nvim_err_writeln('thread_convo: buffer create failed')
             return
         end
     end
 
     -- set buf options
-    vim.api.nvim_buf_set_name(state.buf, "thread://" .. thread_id)
+    vim.api.nvim_buf_set_name(state.buf, 'thread://' .. thread_id)
     vim.api.nvim_buf_set_option(state.buf, 'bufhidden', 'hide')
     vim.api.nvim_buf_set_option(state.buf, 'filetype', 'pr')
     vim.api.nvim_buf_set_option(state.buf, 'buftype', 'nofile')
@@ -145,22 +145,34 @@ local function setup_buffer(thread_id)
     vim.api.nvim_buf_set_option(state.buf, 'wrapmargin', 0)
     vim.api.nvim_buf_set_option(state.buf, 'ofu', 'v:lua.GH_completion')
 
-    vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.submit_comment, "", {callback=M.submit})
-    vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.resolve_thread, "", {callback=M.resolve_thread_toggle})
-    vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.actions, "", {callback=M.comment_actions})
+    vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.submit_comment, '', { callback = M.submit })
+    vim.api.nvim_buf_set_keymap(
+        state.buf,
+        'n',
+        config.config.keymaps.resolve_thread,
+        '',
+        { callback = M.resolve_thread_toggle }
+    )
+    vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.actions, '', { callback = M.comment_actions })
     if not config.config.disable_keymaps then
-        vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.goto_issue, "", {callback=issues.open_issue_under_cursor})
+        vim.api.nvim_buf_set_keymap(
+            state.buf,
+            'n',
+            config.config.keymaps.goto_issue,
+            '',
+            { callback = issues.open_issue_under_cursor }
+        )
     end
 
-    vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
+    vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
         buffer = state.buf,
         callback = in_editable_area,
     })
-    vim.api.nvim_create_autocmd({"BufEnter"}, {
+    vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         buffer = state.buf,
         callback = require('litee.lib.util.window').set_tree_highlights,
     })
-    vim.api.nvim_create_autocmd({"BufEnter"}, {
+    vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         buffer = state.buf,
         callback = _win_settings_on,
     })
@@ -170,9 +182,9 @@ local function parse_comment_body(body, left_sign)
     local lines = {}
     body = vim.fn.split(body, '\n')
     for _, line in ipairs(body) do
-        line = vim.fn.substitute(line, "\r", "", "g")
-        line = vim.fn.substitute(line, "\n", "", "g")
-        line = vim.fn.substitute(line, "\t", symbols.tab, "g")
+        line = vim.fn.substitute(line, '\r', '', 'g')
+        line = vim.fn.substitute(line, '\n', '', 'g')
+        line = vim.fn.substitute(line, '\t', symbols.tab, 'g')
         if left_sign then
             line = symbols.left .. line
         end
@@ -184,17 +196,17 @@ end
 local function count_reactions(comment)
     local counts = {}
     local user_reactions = {}
-    for _, r in ipairs(comment.comment["reactions"]["edges"]) do
-        r = r["node"]
+    for _, r in ipairs(comment.comment['reactions']['edges']) do
+        r = r['node']
 
-        if r["user"]["login"] == s.pull_state.user["login"] then
-            user_reactions[r["content"]] = true
+        if r['user']['login'] == s.pull_state.user['login'] then
+            user_reactions[r['content']] = true
         end
 
-        if counts[r["content"]] == nil then
-            counts[r["content"]] = 1
+        if counts[r['content']] == nil then
+            counts[r['content']] = 1
         else
-            counts[r["content"]] = counts[r["content"]] + 1
+            counts[r['content']] = counts[r['content']] + 1
         end
     end
     return counts, user_reactions
@@ -204,38 +216,39 @@ end
 local function render_comment(comment, outdated)
     local lines = {}
     local reaction_lines = count_reactions(comment)
-    local reaction_string = ""
+    local reaction_string = ''
     for r, count in pairs(reaction_lines) do
-        reaction_string = reaction_string .. reactions_map[r] .. count .. " "
+        reaction_string = reaction_string .. reactions_map[r] .. count .. ' '
     end
 
-    local author = comment.comment["author"]["login"]
-    local title = string.format("%s %s commented on %s ", config.icon_set["Account"], author, comment.comment["updatedAt"])
+    local author = comment.comment['author']['login']
+    local title =
+        string.format('%s %s commented on %s ', config.icon_set['Account'], author, comment.comment['updatedAt'])
     if outdated then
-        title = title .. " [outdated]"
-    elseif comment.comment["state"] == "PENDING" then
-        title = title .. " [pending]"
+        title = title .. ' [outdated]'
+    elseif comment.comment['state'] == 'PENDING' then
+        title = title .. ' [pending]'
     end
     table.insert(lines, title)
 
-    table.insert(lines, "")
-    for _, line in ipairs(parse_comment_body(comment.comment["body"], false)) do
+    table.insert(lines, '')
+    for _, line in ipairs(parse_comment_body(comment.comment['body'], false)) do
         table.insert(lines, line)
     end
-    if reaction_string ~= "" then
-        table.insert(lines, "")
-        table.insert(lines,  reaction_string)
+    if reaction_string ~= '' then
+        table.insert(lines, '')
+        table.insert(lines, reaction_string)
     end
 
     return lines
 end
 
--- create_thread places the thread buffer into "creating_comment" state and 
--- renders a user input area. 
+-- create_thread places the thread buffer into "creating_comment" state and
+-- renders a user input area.
 --
 -- when submit() is subsequently called thread will be created.
 function M.create_thread(details)
-    setup_buffer("new")
+    setup_buffer('new')
 
     reset_state()
 
@@ -244,9 +257,16 @@ function M.create_thread(details)
     vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, {})
 
     local buffer_lines = {}
-    table.insert(buffer_lines, string.format("%s  Create your new comment below... (submit: %s)", config.icon_set["Account"], config.config.keymaps.submit_comment))
+    table.insert(
+        buffer_lines,
+        string.format(
+            '%s  Create your new comment below... (submit: %s)',
+            config.icon_set['Account'],
+            config.config.keymaps.submit_comment
+        )
+    )
     state.text_area_off = #buffer_lines
-    table.insert(buffer_lines, "")
+    table.insert(buffer_lines, '')
     vim.api.nvim_buf_set_lines(state.buf, 0, #buffer_lines, false, buffer_lines)
 
     -- set some additional book keeping state.
@@ -270,7 +290,7 @@ function M.restore_comment_create(displayed)
     vim.api.nvim_buf_set_lines(state.buf, state.text_area_off, new_buf_end, false, displayed.text_area)
     M.set_modifiable(false)
     state.buffer_end = new_buf_end
-    lib_util.safe_cursor_reset(displayed.win, {new_buf_end, vim.o.columns})
+    lib_util.safe_cursor_reset(displayed.win, { new_buf_end, vim.o.columns })
 end
 
 -- restore_thread takes a requested thread_id which diffview is requested to be
@@ -279,14 +299,14 @@ end
 -- if they reference the same thread, a restore function is returned which will
 -- restore any old text into the newly rendered buffer.
 --
--- the returned function expects the global state to be passed to it and will 
+-- the returned function expects the global state to be passed to it and will
 -- update the state's buffers accordingly.
 local function restore_thread(thread_id, displayed_thread)
     if
-        displayed_thread == nil or
-        displayed_thread.buffer ~= state.buf or
-        displayed_thread.thread_id ~= thread_id or
-        not vim.api.nvim_win_is_valid(displayed_thread.win)
+        displayed_thread == nil
+        or displayed_thread.buffer ~= state.buf
+        or displayed_thread.thread_id ~= thread_id
+        or not vim.api.nvim_win_is_valid(displayed_thread.win)
     then
         -- return a no-op
         return function(_) end
@@ -297,23 +317,27 @@ local function restore_thread(thread_id, displayed_thread)
     local has_content
     local _, text_area_lines = extract_text()
     if text_area_lines == nil then
-        return function(_) lib_util.safe_cursor_reset(displayed_thread.win, cursor) end
+        return function(_)
+            lib_util.safe_cursor_reset(displayed_thread.win, cursor)
+        end
     end
 
     for _, line in ipairs(text_area_lines) do
-        if line ~= "" then
+        if line ~= '' then
             has_content = true
         end
     end
     if not has_content then
-        return function(_) lib_util.safe_cursor_reset(displayed_thread.win, cursor) end
+        return function(_)
+            lib_util.safe_cursor_reset(displayed_thread.win, cursor)
+        end
     end
 
     return function(state)
         local new_buf_end = state.buffer_end + #text_area_lines
         vim.api.nvim_buf_set_lines(state.buf, state.text_area_off, new_buf_end, false, text_area_lines)
         state.buffer_end = new_buf_end
-        lib_util.safe_cursor_reset(displayed_thread.win, {new_buf_end, vim.o.columns})
+        lib_util.safe_cursor_reset(displayed_thread.win, { new_buf_end, vim.o.columns })
     end
 end
 
@@ -326,18 +350,18 @@ local function resolve_thread_line(thread, original_commit)
     end)()
 
     local line = nil
-        if thread["originalLine"] ~= vim.NIL then
-            line = thread["originalLine"]
-        end
-        if thread["line"] ~= vim.NIL then
-            line = thread["line"]
-        end
+    if thread['originalLine'] ~= vim.NIL then
+        line = thread['originalLine']
+    end
+    if thread['line'] ~= vim.NIL then
+        line = thread['line']
+    end
     if use_original then
-        if thread["line"] ~= vim.NIL then
-            line = thread["line"]
+        if thread['line'] ~= vim.NIL then
+            line = thread['line']
         end
-        if thread["originalLine"] ~= vim.NIL then
-            line = thread["originalLine"]
+        if thread['originalLine'] ~= vim.NIL then
+            line = thread['originalLine']
         end
     end
     return line
@@ -346,49 +370,49 @@ end
 local function write_preview(thread, buffer_lines, lines_to_highlight, hi, line_nr)
     local root_comment = thread.children[1].comment
     local comment_line = line_nr + 1
-    local lines = vim.split(root_comment["diffHunk"], "\n")
-    table.insert(buffer_lines, "")
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
+    local lines = vim.split(root_comment['diffHunk'], '\n')
+    table.insert(buffer_lines, '')
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
     local tmp = {}
     for i = #lines, 1, -1 do
-        if i == (#lines-4) or i == 1 then
+        if i == (#lines - 4) or i == 1 then
             break
         end
         table.insert(tmp, lines[i])
     end
     if #tmp > 0 then
-        local prev_symbol = ""
-        comment_line = (comment_line - #tmp)-1
+        local prev_symbol = ''
+        comment_line = (comment_line - #tmp) - 1
         for i = #tmp, 1, -1 do
             local l = tmp[i]
-            if string.sub(l,1,1) == "+" then
-                if prev_symbol ~= "-" then
+            if string.sub(l, 1, 1) == '+' then
+                if prev_symbol ~= '-' then
                     comment_line = comment_line + 1
                 end
                 l = string.sub(l, 2, -1)
-                local buf_line = string.format("%d + ▏ %s", comment_line, l)
+                local buf_line = string.format('%d + ▏ %s', comment_line, l)
                 table.insert(buffer_lines, buf_line)
-                table.insert(lines_to_highlight, {#buffer_lines, "DiffAdd"})
-                prev_symbol = "+"
-            elseif string.sub(l,1,1) == "-" then
+                table.insert(lines_to_highlight, { #buffer_lines, 'DiffAdd' })
+                prev_symbol = '+'
+            elseif string.sub(l, 1, 1) == '-' then
                 comment_line = comment_line + 1
                 l = string.sub(l, 2, -1)
-                local buf_line = string.format("%d - ▏ %s", comment_line, l)
+                local buf_line = string.format('%d - ▏ %s', comment_line, l)
                 table.insert(buffer_lines, buf_line)
-                table.insert(lines_to_highlight, {#buffer_lines, "DiffDelete"})
-                prev_symbol = "-"
+                table.insert(lines_to_highlight, { #buffer_lines, 'DiffDelete' })
+                prev_symbol = '-'
             else
                 comment_line = comment_line + 1
-                local buf_line = string.format("%d   ▏ %s", comment_line, l)
+                local buf_line = string.format('%d   ▏ %s', comment_line, l)
                 table.insert(buffer_lines, buf_line)
-                table.insert(lines_to_highlight, {#buffer_lines, hi})
+                table.insert(lines_to_highlight, { #buffer_lines, hi })
             end
         end
     end
 end
 
 -- render_thread is the entrypoint function for displaying a thread buffer.
--- 
+--
 -- thread_id is the requested thread to display and this thread should be loaded
 -- into s.pull_state before being requested.
 --
@@ -407,10 +431,7 @@ function M.render_thread(thread_id, line_nr, n_of, displayed_thread, side)
 
     -- special case, if we are in "creating_comment" state, restore this incase
     -- this is a refresh and the user was writing a message.
-    if
-        state.creating_comment ~= nil
-        and displayed_thread ~= nil
-    then
+    if state.creating_comment ~= nil and displayed_thread ~= nil then
         restore(state)
         return state.buf
     end
@@ -426,7 +447,7 @@ function M.render_thread(thread_id, line_nr, n_of, displayed_thread, side)
     -- requested thread to render doesn't exist, it could have been deleted.
     if thread == nil then
         M.set_modifiable(true)
-        table.insert(buffer_lines, "Thread does not exist.")
+        table.insert(buffer_lines, 'Thread does not exist.')
         vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, buffer_lines)
         M.set_modifiable(false)
         return state.buf
@@ -440,113 +461,134 @@ function M.render_thread(thread_id, line_nr, n_of, displayed_thread, side)
     local marks_to_create = {}
 
     -- pull out root comment
-    local root_comment = thread["children"][1]
+    local root_comment = thread['children'][1]
 
     -- render thread header
-    local hi = config.config.highlights["thread_separator"]
-    table.insert(buffer_lines, string.format("%s  Thread [%d/%d]",  config.icon_set["MultiComment"], n_of[1], n_of[2]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Author: %s",  config.icon_set["Account"], root_comment.comment["author"]["login"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Path: %s",  config.icon_set["File"], thread.thread["path"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Line: %s",  config.icon_set["File"], thread.thread["line"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
+    local hi = config.config.highlights['thread_separator']
+    table.insert(buffer_lines, string.format('%s  Thread [%d/%d]', config.icon_set['MultiComment'], n_of[1], n_of[2]))
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(
+        buffer_lines,
+        string.format('%s  Author: %s', config.icon_set['Account'], root_comment.comment['author']['login'])
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(buffer_lines, string.format('%s  Path: %s', config.icon_set['File'], thread.thread['path']))
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(buffer_lines, string.format('%s  Line: %s', config.icon_set['File'], thread.thread['line']))
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
 
-    if thread.thread["originalLine"] ~= vim.NIL and thread.thread["originalLine"] ~= thread.thread["line"] then
-        table.insert(buffer_lines, string.format("%s  Original Line: %s",  config.icon_set["File"], thread.thread["originalLine"]))
-        table.insert(lines_to_highlight, {#buffer_lines, hi})
+    if thread.thread['originalLine'] ~= vim.NIL and thread.thread['originalLine'] ~= thread.thread['line'] then
+        table.insert(
+            buffer_lines,
+            string.format('%s  Original Line: %s', config.icon_set['File'], thread.thread['originalLine'])
+        )
+        table.insert(lines_to_highlight, { #buffer_lines, hi })
     end
-    table.insert(buffer_lines, string.format("%s  Original Commit: %s",  config.icon_set["GitCommit"], string.sub(root_comment.comment["originalCommit"]["oid"], 1, 8)))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
+    table.insert(
+        buffer_lines,
+        string.format(
+            '%s  Original Commit: %s',
+            config.icon_set['GitCommit'],
+            string.sub(root_comment.comment['originalCommit']['oid'], 1, 8)
+        )
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
 
-    table.insert(buffer_lines, string.format("%s  Resolved: %s",  config.icon_set["CheckAll"], thread.thread["isResolved"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Outdated: %s",  config.icon_set["History"], thread.thread["isOutdated"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Created: %s",  config.icon_set["Calendar"], root_comment.comment["createdAt"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("%s  Last Updated: %s",  config.icon_set["Calendar"], root_comment.comment["updatedAt"]))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
+    table.insert(
+        buffer_lines,
+        string.format('%s  Resolved: %s', config.icon_set['CheckAll'], thread.thread['isResolved'])
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(
+        buffer_lines,
+        string.format('%s  Outdated: %s', config.icon_set['History'], thread.thread['isOutdated'])
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(
+        buffer_lines,
+        string.format('%s  Created: %s', config.icon_set['Calendar'], root_comment.comment['createdAt'])
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(
+        buffer_lines,
+        string.format('%s  Last Updated: %s', config.icon_set['Calendar'], root_comment.comment['updatedAt'])
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
     -- preview in header
     write_preview(thread, buffer_lines, lines_to_highlight, hi, line_nr)
-    table.insert(buffer_lines, "")
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, string.format("(submit: %s)(comment actions: %s)(un/resolve: %s)", config.config.keymaps.submit_comment, config.config.keymaps.actions, config.config.keymaps.resolve_thread))
-    table.insert(lines_to_highlight, {#buffer_lines, hi})
-    table.insert(buffer_lines, "")
+    table.insert(buffer_lines, '')
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(
+        buffer_lines,
+        string.format(
+            '(submit: %s)(comment actions: %s)(un/resolve: %s)',
+            config.config.keymaps.submit_comment,
+            config.config.keymaps.actions,
+            config.config.keymaps.resolve_thread
+        )
+    )
+    table.insert(lines_to_highlight, { #buffer_lines, hi })
+    table.insert(buffer_lines, '')
 
     -- render root comment
-    local root_comment_lines = render_comment(root_comment, thread.thread["isOutdated"])
-    hi = config.config.highlights["thread_separator_alt"]
+    local root_comment_lines = render_comment(root_comment, thread.thread['isOutdated'])
+    hi = config.config.highlights['thread_separator_alt']
     for _, l in ipairs(root_comment_lines) do
         table.insert(buffer_lines, l)
-        table.insert(lines_to_highlight, {#buffer_lines, hi})
+        table.insert(lines_to_highlight, { #buffer_lines, hi })
     end
     -- mark end of root comment
-    table.insert(marks_to_create, {#buffer_lines-1, root_comment})
-    table.insert(buffer_lines, "")
+    table.insert(marks_to_create, { #buffer_lines - 1, root_comment })
+    table.insert(buffer_lines, '')
 
     for i, reply in ipairs(thread.children) do
         if i == 1 then
-           goto continue
+            goto continue
         end
         if i % 2 == 0 then
-            hi = config.config.highlights["thread_separator"]
+            hi = config.config.highlights['thread_separator']
         else
-            hi = config.config.highlights["thread_separator_alt"]
+            hi = config.config.highlights['thread_separator_alt']
         end
         local reply_lines = render_comment(reply)
         for _, line in ipairs(reply_lines) do
             table.insert(buffer_lines, line)
-            table.insert(lines_to_highlight, {#buffer_lines, hi})
+            table.insert(lines_to_highlight, { #buffer_lines, hi })
         end
-        table.insert(marks_to_create, {#buffer_lines-1, reply})
-        table.insert(buffer_lines, "")
+        table.insert(marks_to_create, { #buffer_lines - 1, reply })
+        table.insert(buffer_lines, '')
         ::continue::
     end
 
     -- user text area
-    table.insert(buffer_lines, "")
-    table.insert(buffer_lines, string.format("%s  %s", config.icon_set["Account"], "Add a reply below..."))
+    table.insert(buffer_lines, '')
+    table.insert(buffer_lines, string.format('%s  %s', config.icon_set['Account'], 'Add a reply below...'))
 
     -- record the offset to our reply message, we'll allow editing here
     state.text_area_off = #buffer_lines
-    table.insert(buffer_lines, "")
+    table.insert(buffer_lines, '')
 
     -- write all buffer lines to the buffer
     vim.api.nvim_buf_set_lines(state.buf, 0, #buffer_lines, false, buffer_lines)
 
     -- write out all our marks.
     for _, m in ipairs(marks_to_create) do
-        local id = vim.api.nvim_buf_set_extmark(
-            state.buf,
-            ns,
-            m[1],
-            0,
-            {}
-        )
+        local id = vim.api.nvim_buf_set_extmark(state.buf, ns, m[1], 0, {})
         state.marks_to_comments[id] = m[2]
     end
 
     -- marks to create highlighted separators
     for _, l in ipairs(lines_to_highlight) do
-        vim.api.nvim_buf_set_extmark(
-            state.buf,
-            hi_ns,
-            l[1]-1,
-            0,
-            {
-                line_hl_group = l[2]
-            }
-        )
+        vim.api.nvim_buf_set_extmark(state.buf, hi_ns, l[1] - 1, 0, {
+            line_hl_group = l[2],
+        })
     end
 
     -- set some additional book keeping state.
     state.buffer_end = #buffer_lines
     state.thread = thread
 
-    -- if the requested thread_id to render was also the currently displayed 
+    -- if the requested thread_id to render was also the currently displayed
     -- thread, restore the cursor and possible draft text which was left.
     restore(state)
 
@@ -559,8 +601,8 @@ end
 -- the user's cursor.
 local function comment_under_cursor()
     local cursor = vim.api.nvim_win_get_cursor(0)
-    local marks  = vim.api.nvim_buf_get_extmarks(0, ns, {cursor[1]-1, 0}, {-1, 0}, {
-        limit = 1
+    local marks = vim.api.nvim_buf_get_extmarks(0, ns, { cursor[1] - 1, 0 }, { -1, 0 }, {
+        limit = 1,
     })
     if #marks == 0 then
         return
@@ -570,7 +612,7 @@ local function comment_under_cursor()
     return comment
 end
 
--- edit the comment under the cursor. 
+-- edit the comment under the cursor.
 -- places the thread_buffer in "editing_comment" state and will submit the changes
 -- on submit()
 function M.edit_comment()
@@ -581,26 +623,26 @@ function M.edit_comment()
 
     local lines = {}
 
-    if not comment.comment["viewerDidAuthor"] then
-        lib_notify.notify_popup_with_timeout("Cannot edit a comment you did not author.", 7500, "error")
+    if not comment.comment['viewerDidAuthor'] then
+        lib_notify.notify_popup_with_timeout('Cannot edit a comment you did not author.', 7500, 'error')
         return
     end
 
-    table.insert(lines, string.format("%s  %s", config.icon_set["Account"], "Edit the message below..."))
-    for _, line in ipairs(parse_comment_body(comment.comment["body"], false)) do
+    table.insert(lines, string.format('%s  %s', config.icon_set['Account'], 'Edit the message below...'))
+    for _, line in ipairs(parse_comment_body(comment.comment['body'], false)) do
         table.insert(lines, line)
     end
 
     M.set_modifiable(true)
 
     -- replace buffer lines from reply section down
-    vim.api.nvim_buf_set_lines(state.buf, state.text_area_off-1, -1, false, lines)
+    vim.api.nvim_buf_set_lines(state.buf, state.text_area_off - 1, -1, false, lines)
 
     -- setting this to not nil will have submit() perform an "update" instead of
     -- a "reply".
     state.editing_comment = comment
 
-    vim.api.nvim_win_set_cursor(0, {state.text_area_off+#lines-1, 0})
+    vim.api.nvim_win_set_cursor(0, { state.text_area_off + #lines - 1, 0 })
 
     M.set_modifiable(false)
 end
@@ -612,46 +654,39 @@ function M.delete_comment()
         return
     end
     local rest_id = comment_rest_id(comment)
-    vim.ui.select(
-        {"no", "yes"},
-        {prompt="Are you use you want to delete this comment? "},
-        function(_, idx)
-            if
-                idx == nil or
-                idx == 1
-            then
-                return
-            end
-
-            local out = ghcli.delete_comment(rest_id)
-            if out == nil then
-                lib_notify.notify_popup_with_timeout("Failed to delete comment.", 7500, "error")
-                return
-            end
-
-            -- perform refresh of comments data
-            vim.cmd("GHRefreshComments")
+    vim.ui.select({ 'no', 'yes' }, { prompt = 'Are you use you want to delete this comment? ' }, function(_, idx)
+        if idx == nil or idx == 1 then
+            return
         end
-    )
+
+        local out = ghcli.delete_comment(rest_id)
+        if out == nil then
+            lib_notify.notify_popup_with_timeout('Failed to delete comment.', 7500, 'error')
+            return
+        end
+
+        -- perform refresh of comments data
+        vim.cmd('GHRefreshComments')
+    end)
 end
 
 -- will toggle the current thread between resolved/unresolved
 function M.resolve_thread_toggle()
-    if state.thread.thread["isResolved"] then
-        local out = ghcli.unresolve_thread(state.thread.thread["id"])
+    if state.thread.thread['isResolved'] then
+        local out = ghcli.unresolve_thread(state.thread.thread['id'])
         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to resolve thread.", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to resolve thread.', 7500, 'error')
             return
         end
     else
-        local out = ghcli.resolve_thread(state.thread.thread["id"])
+        local out = ghcli.resolve_thread(state.thread.thread['id'])
         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to resolve thread.", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to resolve thread.', 7500, 'error')
             return
         end
     end
     -- perform refresh of comments data
-    vim.cmd("GHRefreshComments")
+    vim.cmd('GHRefreshComments')
 end
 
 function M.set_modifiable(bool)
@@ -664,19 +699,19 @@ end
 local function reply(body)
     -- if we are not in a review perform a regular reply, if we are
     -- perform a reply associated with the review.
-    local root_comment = state.thread["children"][1]
+    local root_comment = state.thread['children'][1]
     if s.pull_state.review == nil then
         local rest_id = comment_rest_id(root_comment)
-        local out = ghcli.reply_comment(s.pull_state["number"], rest_id, body)
+        local out = ghcli.reply_comment(s.pull_state['number'], rest_id, body)
         if out == nil then
             return nil
         end
         return out
     else
-        local id = root_comment["comment"]["id"]
+        local id = root_comment['comment']['id']
         local out = ghcli.reply_comment_review(
-            s.pull_state.pr_raw["node_id"],
-            s.pull_state.review["node_id"],
+            s.pull_state.pr_raw['node_id'],
+            s.pull_state.review['node_id'],
             s.pull_state.head,
             body,
             id
@@ -703,66 +738,66 @@ end
 local function create(body, details)
     -- create non-review related comment
     if s.pull_state.review == nil then
-       if details.line == details.end_line then
-           local out = ghcli.create_comment(
-               details.pull_number,
-               details.commit_sha,
-               details.path,
-               details.position,
-               details.side,
-               details.line,
-               body
-           )
-           if out == nil then
-               lib_notify.notify_popup_with_timeout("Failed to create new comment.", 7500, "error")
-               return
-           end
+        if details.line == details.end_line then
+            local out = ghcli.create_comment(
+                details.pull_number,
+                details.commit_sha,
+                details.path,
+                details.position,
+                details.side,
+                details.line,
+                body
+            )
+            if out == nil then
+                lib_notify.notify_popup_with_timeout('Failed to create new comment.', 7500, 'error')
+                return
+            end
         else
-           local out = ghcli.create_comment_multiline(
-               details.pull_number,
-               details.commit_sha,
-               details.path,
-               details.position,
-               details.side,
-               details.line,
-               details.end_line,
-               body
-           )
-           if out == nil then
-               lib_notify.notify_popup_with_timeout("failed to create new comment.", 7500, "error")
-               return
-           end
-       end
+            local out = ghcli.create_comment_multiline(
+                details.pull_number,
+                details.commit_sha,
+                details.path,
+                details.position,
+                details.side,
+                details.line,
+                details.end_line,
+                body
+            )
+            if out == nil then
+                lib_notify.notify_popup_with_timeout('failed to create new comment.', 7500, 'error')
+                return
+            end
+        end
     else
-    -- create comment within the review
-       if details.line == details.end_line then
-           local out = ghcli.create_comment_review(
-               s.pull_state.pr_raw["node_id"],
-               s.pull_state.review["node_id"],
-               body,
-               details.path,
-               details.line,
-               details.side
-           )
-           if out == nil then
-               lib_notify.notify_popup_with_timeout("Failed to create new comment.", 7500, "error")
-               return
-           end
+        -- create comment within the review
+        if details.line == details.end_line then
+            local out = ghcli.create_comment_review(
+                s.pull_state.pr_raw['node_id'],
+                s.pull_state.review['node_id'],
+                body,
+                details.path,
+                details.line,
+                details.side
+            )
+            if out == nil then
+                lib_notify.notify_popup_with_timeout('Failed to create new comment.', 7500, 'error')
+                return
+            end
         else
-           local out = ghcli.create_comment_review_multiline(
-               s.pull_state.pr_raw["node_id"],
-               s.pull_state.review["node_id"],
-               body,
-               details.path,
-               details.line,
-               details.end_line,
-               details.side
-           )
-           if out == nil then
-               lib_notify.notify_popup_with_timeout("Failed to create new comment.", 7500, "error")
-               return
-           end
-       end
+            local out = ghcli.create_comment_review_multiline(
+                s.pull_state.pr_raw['node_id'],
+                s.pull_state.review['node_id'],
+                body,
+                details.path,
+                details.line,
+                details.end_line,
+                details.side
+            )
+            if out == nil then
+                lib_notify.notify_popup_with_timeout('Failed to create new comment.', 7500, 'error')
+                return
+            end
+        end
     end
     vim.api.nvim_win_set_buf(0, details.original_buf)
 end
@@ -777,44 +812,48 @@ function M.reaction()
     local items = {}
     local _, user_reactions = count_reactions(comment)
     for name, icon in pairs(reactions.reaction_map) do
-        table.insert(items, icon .. " " .. name)
+        table.insert(items, icon .. ' ' .. name)
     end
-    vim.ui.select(
-        reactions.reaction_names,
-        {
-            prompt = "Select a reaction: ",
-            format_item = function(item)
-                return reactions.reaction_map[item] .. " " .. item
-            end
-        },
-        function(_, idx)
-            if user_reactions[reactions.reaction_names[idx]] == true then
-                ghcli.remove_reaction_async(comment.comment["id"], reactions.reaction_names[idx], vim.schedule_wrap(function(err, data)
+    vim.ui.select(reactions.reaction_names, {
+        prompt = 'Select a reaction: ',
+        format_item = function(item)
+            return reactions.reaction_map[item] .. ' ' .. item
+        end,
+    }, function(_, idx)
+        if user_reactions[reactions.reaction_names[idx]] == true then
+            ghcli.remove_reaction_async(
+                comment.comment['id'],
+                reactions.reaction_names[idx],
+                vim.schedule_wrap(function(err, data)
                     if err then
-                        lib_notify.notify_popup_with_timeout("Failed to add reaction.", 7500, "error")
+                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                         return
                     end
                     if data == nil then
-                        lib_notify.notify_popup_with_timeout("Failed to add reaction.", 7500, "error")
+                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                         return
                     end
-                    vim.cmd("GHRefreshComments")
-                end))
-            else
-                ghcli.add_reaction(comment.comment["id"], reactions.reaction_names[idx], vim.schedule_wrap(function(err, data)
+                    vim.cmd('GHRefreshComments')
+                end)
+            )
+        else
+            ghcli.add_reaction(
+                comment.comment['id'],
+                reactions.reaction_names[idx],
+                vim.schedule_wrap(function(err, data)
                     if err then
-                        lib_notify.notify_popup_with_timeout("Failed to add reaction.", 7500, "error")
+                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                         return
                     end
                     if data == nil then
-                        lib_notify.notify_popup_with_timeout("Failed to add reaction.", 7500, "error")
+                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                         return
                     end
-                    vim.cmd("GHRefreshComments")
-                end))
-            end
+                    vim.cmd('GHRefreshComments')
+                end)
+            )
         end
-    )
+    end)
 end
 
 -- submit() determines the current state of the thread_buffer and performs the
@@ -831,29 +870,29 @@ function M.submit()
     end
 
     if state.editing_comment ~= nil then
-       local out = update(body)
-       state.editing_comment = nil
-       if out == nil then
-          lib_notify.notify_popup_with_timeout("Failed to update comment.", 7500, "error")
-          return
-       end
+        local out = update(body)
+        state.editing_comment = nil
+        if out == nil then
+            lib_notify.notify_popup_with_timeout('Failed to update comment.', 7500, 'error')
+            return
+        end
     elseif state.creating_comment ~= nil then
-       create(body, state.creating_comment)
-       if state.creating_comment.on_create ~= nil then
-         state.creating_comment.on_create()
-       end
-       state.creating_comment = nil
+        create(body, state.creating_comment)
+        if state.creating_comment.on_create ~= nil then
+            state.creating_comment.on_create()
+        end
+        state.creating_comment = nil
     else
-       local out = reply(body)
-       if out == nil then
-          lib_notify.notify_popup_with_timeout("Failed to create reply.", 7500, "error")
-          return
-       end
+        local out = reply(body)
+        if out == nil then
+            lib_notify.notify_popup_with_timeout('Failed to create reply.', 7500, 'error')
+            return
+        end
     end
     M.set_modifiable(true)
     vim.api.nvim_buf_set_lines(state.buf, state.text_area_off, -1, false, {})
     M.set_modifiable(false)
-    vim.cmd("GHRefreshComments")
+    vim.cmd('GHRefreshComments')
 end
 
 -- comment_actions displays a list of actions for a given comment.
@@ -863,21 +902,21 @@ function M.comment_actions()
         return
     end
     vim.ui.select(
-        {"edit", "delete", "react"},
-        {prompt="Pick a action to perform on this comment: "},
+        { 'edit', 'delete', 'react' },
+        { prompt = 'Pick a action to perform on this comment: ' },
         function(item, _)
             if item == nil then
                 return
             end
-            if item == "edit" then
+            if item == 'edit' then
                 M.edit_comment()
                 return
             end
-            if item == "delete" then
+            if item == 'delete' then
                 M.delete_comment()
                 return
             end
-            if item == "react" then
+            if item == 'react' then
                 M.reaction()
                 return
             end

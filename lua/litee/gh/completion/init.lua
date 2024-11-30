@@ -35,35 +35,35 @@ function GH_completion(start, base)
     fill_issue_cache()
     if start == 1 then
         local cursor = vim.api.nvim_win_get_cursor(0)
-        local line = vim.api.nvim_buf_get_lines(0, cursor[1]-1, cursor[1], true)
-        local at_idx = vim.fn.strridx(line[1], "@", cursor[2])
+        local line = vim.api.nvim_buf_get_lines(0, cursor[1] - 1, cursor[1], true)
+        local at_idx = vim.fn.strridx(line[1], '@', cursor[2])
         if at_idx ~= -1 then
             return at_idx
         end
-        local hash_idx = vim.fn.strridx(line[1], "#", cursor[2])
+        local hash_idx = vim.fn.strridx(line[1], '#', cursor[2])
         if hash_idx ~= -1 then
             return hash_idx
         end
         return -3
     end
-    if vim.fn.match(base, "@") ~= -1 then
+    if vim.fn.match(base, '@') ~= -1 then
         local matches = {}
         for _, contributor in ipairs(M.contributor_cache) do
-            if vim.fn.match("@"..contributor["login"], base) ~= -1 then
+            if vim.fn.match('@' .. contributor['login'], base) ~= -1 then
                 table.insert(matches, {
-                    word = "@"..contributor["login"],
-                    menu = contributor["type"]
+                    word = '@' .. contributor['login'],
+                    menu = contributor['type'],
                 })
             end
         end
         return matches
-    elseif vim.fn.match(base, "#") ~= -1 then
+    elseif vim.fn.match(base, '#') ~= -1 then
         local matches = {}
         for _, iss in ipairs(M.issue_cache) do
-            if vim.fn.match("#"..iss["number"], base) ~= -1 then
+            if vim.fn.match('#' .. iss['number'], base) ~= -1 then
                 table.insert(matches, {
-                    word = "#"..iss["number"],
-                    menu = iss["title"]
+                    word = '#' .. iss['number'],
+                    menu = iss['title'],
                 })
             end
         end

@@ -1,21 +1,21 @@
-local lib_state     = require('litee.lib.state')
-local lib_tree      = require('litee.lib.tree')
-local lib_notify    = require('litee.lib.notify')
-local lib_panel     = require('litee.lib.panel')
-local lib_details   = require('litee.lib.details')
-local lib_util      = require('litee.lib.util')
+local lib_state = require('litee.lib.state')
+local lib_tree = require('litee.lib.tree')
+local lib_notify = require('litee.lib.notify')
+local lib_panel = require('litee.lib.panel')
+local lib_details = require('litee.lib.details')
+local lib_util = require('litee.lib.util')
 
-local config        = require('litee.gh.config')
-local handlers      = require('litee.gh.pr.handlers')
-local ghcli         = require('litee.gh.ghcli')
-local gitcli        = require('litee.gh.gitcli')
-local s             = require('litee.gh.pr.state')
-local diff_view     = require('litee.gh.pr.diff_view')
+local config = require('litee.gh.config')
+local handlers = require('litee.gh.pr.handlers')
+local ghcli = require('litee.gh.ghcli')
+local gitcli = require('litee.gh.gitcli')
+local s = require('litee.gh.pr.state')
+local diff_view = require('litee.gh.pr.diff_view')
 local thread_buffer = require('litee.gh.pr.thread_buffer')
-local pr_details    = require('litee.gh.pr.details')
-local marshaler     = require('litee.gh.pr.marshal')
-local issues        = require('litee.gh.issues')
-local commits       = require('litee.gh.commits')
+local pr_details = require('litee.gh.pr.details')
+local marshaler = require('litee.gh.pr.marshal')
+local issues = require('litee.gh.issues')
+local commits = require('litee.gh.commits')
 
 local M = {}
 
@@ -32,13 +32,13 @@ local function open_nodes_url(node)
 end
 
 local function ui_req_ctx()
-    local buf    = vim.api.nvim_get_current_buf()
-    local win    = vim.api.nvim_get_current_win()
-    local tab    = vim.api.nvim_win_get_tabpage(win)
+    local buf = vim.api.nvim_get_current_buf()
+    local win = vim.api.nvim_get_current_win()
+    local tab = vim.api.nvim_win_get_tabpage(win)
     local linenr = vim.api.nvim_win_get_cursor(win)
-    local tree_type   = lib_state.get_type_from_buf(tab, buf)
+    local tree_type = lib_state.get_type_from_buf(tab, buf)
     local tree_handle = lib_state.get_tree_from_buf(tab, buf)
-    local state       = lib_state.get_state(tab)
+    local state = lib_state.get_state(tab)
 
     -- filled in if we find a valid litee-panel window.
     local pr_cursor = nil
@@ -49,26 +49,31 @@ local function ui_req_ctx()
     local review_node = nil
 
     if state ~= nil then
-        if state["pr"] ~= nil and state["pr"].win ~= nil and
-            vim.api.nvim_win_is_valid(state["pr"].win) then
-            pr_cursor = vim.api.nvim_win_get_cursor(state["pr"].win)
+        if state['pr'] ~= nil and state['pr'].win ~= nil and vim.api.nvim_win_is_valid(state['pr'].win) then
+            pr_cursor = vim.api.nvim_win_get_cursor(state['pr'].win)
         end
         if pr_cursor ~= nil then
-            pr_node = lib_tree.marshal_line(pr_cursor, state["pr"].tree)
+            pr_node = lib_tree.marshal_line(pr_cursor, state['pr'].tree)
         end
-        if state["pr_files"] ~= nil and state["pr_files"].win ~= nil and
-            vim.api.nvim_win_is_valid(state["pr_files"].win) then
-            files_cursor = vim.api.nvim_win_get_cursor(state["pr_files"].win)
+        if
+            state['pr_files'] ~= nil
+            and state['pr_files'].win ~= nil
+            and vim.api.nvim_win_is_valid(state['pr_files'].win)
+        then
+            files_cursor = vim.api.nvim_win_get_cursor(state['pr_files'].win)
         end
         if files_cursor ~= nil then
-            files_node = lib_tree.marshal_line(files_cursor, state["pr_files"].tree)
+            files_node = lib_tree.marshal_line(files_cursor, state['pr_files'].tree)
         end
-        if state["pr_review"] ~= nil and state["pr_review"].win ~= nil and
-            vim.api.nvim_win_is_valid(state["pr_review"].win) then
-            review_cursor = vim.api.nvim_win_get_cursor(state["pr_review"].win)
+        if
+            state['pr_review'] ~= nil
+            and state['pr_review'].win ~= nil
+            and vim.api.nvim_win_is_valid(state['pr_review'].win)
+        then
+            review_cursor = vim.api.nvim_win_get_cursor(state['pr_review'].win)
         end
         if review_cursor ~= nil then
-            review_node = lib_tree.marshal_line(review_cursor, state["pr_review"].tree)
+            review_node = lib_tree.marshal_line(review_cursor, state['pr_review'].tree)
         end
     end
 
@@ -100,27 +105,17 @@ end
 
 local function write_trees(ctx)
     local args = {
-        {"pr", marshaler.marshal_pr_node},
-        {"pr_files", marshaler.marshal_pr_file_node},
-        {"pr_review", marshaler.marshal_pr_node},
+        { 'pr', marshaler.marshal_pr_node },
+        { 'pr_files', marshaler.marshal_pr_file_node },
+        { 'pr_review', marshaler.marshal_pr_node },
     }
     for _, arg in ipairs(args) do
-        if
-            ctx.state[arg[1]] ~= nil and
-            ctx.state[arg[1]].tree ~= nil
-        then
+        if ctx.state[arg[1]] ~= nil and ctx.state[arg[1]].tree ~= nil then
             local old_cursor = nil
-            if
-                ctx.state[arg[1]].win ~= nil and
-                vim.api.nvim_win_is_valid(ctx.state[arg[1]].win)
-            then
+            if ctx.state[arg[1]].win ~= nil and vim.api.nvim_win_is_valid(ctx.state[arg[1]].win) then
                 old_cursor = vim.api.nvim_win_get_cursor(ctx.state[arg[1]].win)
             end
-            lib_tree.write_tree_no_guide_leaf(
-                ctx.state[arg[1]].buf,
-                ctx.state[arg[1]].tree,
-                arg[2]
-            )
+            lib_tree.write_tree_no_guide_leaf(ctx.state[arg[1]].buf, ctx.state[arg[1]].tree, arg[2])
             if old_cursor ~= nil then
                 lib_util.safe_cursor_reset(ctx.state[arg[1]].win, old_cursor)
             end
@@ -129,128 +124,153 @@ local function write_trees(ctx)
 end
 
 local function on_tab_close()
-    table.insert(M.autocmds, vim.api.nvim_create_autocmd({"TabClosed", "QuitPre"}, {
-        callback = function(args)
-            if
-                s.pull_state.tab ~= nil
-                and s.pull_state.tab == tonumber(args.match)
-            then
-                M.clean()
-            end
-        end,
-    }))
-    table.insert(M.autocmds, vim.api.nvim_create_autocmd({"VimLeave"}, {
-        callback = M.clean}))
+    table.insert(
+        M.autocmds,
+        vim.api.nvim_create_autocmd({ 'TabClosed', 'QuitPre' }, {
+            callback = function(args)
+                if s.pull_state.tab ~= nil and s.pull_state.tab == tonumber(args.match) then
+                    M.clean()
+                end
+            end,
+        })
+    )
+    table.insert(
+        M.autocmds,
+        vim.api.nvim_create_autocmd({ 'VimLeave' }, {
+            callback = M.clean,
+        })
+    )
 end
 
 function M.open_pull_by_number(number)
     if s.pull_state ~= nil then
         vim.ui.select(
-            {"no", "yes"},
-            {prompt = string.format('A pull request is already opened, close it and open pull #%s? ', number)},
+            { 'no', 'yes' },
+            { prompt = string.format('A pull request is already opened, close it and open pull #%s? ', number) },
             function(choice)
-                if choice == "yes" then
+                if choice == 'yes' then
                     M.close_pull()
-                    handlers.pr_handler(number, false, vim.schedule_wrap(function () on_tab_close() end ))
+                    handlers.pr_handler(
+                        number,
+                        false,
+                        vim.schedule_wrap(function()
+                            on_tab_close()
+                        end)
+                    )
                 end
             end
         )
     else
-        handlers.pr_handler(number, false, vim.schedule_wrap(function () on_tab_close() end ))
+        handlers.pr_handler(
+            number,
+            false,
+            vim.schedule_wrap(function()
+                on_tab_close()
+            end)
+        )
     end
 end
 
 function M.search_pulls()
-    vim.ui.input(
-        {prompt = 'Enter a query string or leave blank for all PRs: '},
-        function(input) 
-            local repo = ghcli.get_repo_name_owner()
-            lib_notify.notify_popup_with_timeout("Searching for pull requests, this may take a bit...", 7500, "info")
-            ghcli.search_pulls(repo["owner"]["login"], repo["name"], input, function(err, prs) 
-                if err then
-                    lib_notify.notify_popup_with_timeout("Failed to list PRs: " .. err, 7500, "error")
+    vim.ui.input({ prompt = 'Enter a query string or leave blank for all PRs: ' }, function(input)
+        local repo = ghcli.get_repo_name_owner()
+        lib_notify.notify_popup_with_timeout('Searching for pull requests, this may take a bit...', 7500, 'info')
+        ghcli.search_pulls(repo['owner']['login'], repo['name'], input, function(err, prs)
+            if err then
+                lib_notify.notify_popup_with_timeout('Failed to list PRs: ' .. err, 7500, 'error')
+                return
+            end
+            table.sort(prs, function(a, b)
+                return a['updated_at'] > b['updated_at']
+            end)
+            vim.ui.select(prs, {
+                prompt = 'Select a pull request to open: ',
+                format_item = function(pull)
+                    return string.format(
+                        [[%s%d | %s "%s" | %s %s]],
+                        config.icon_set['Number'],
+                        pull['number'],
+                        config.icon_set['GitPullRequest'],
+                        pull['title'],
+                        config.icon_set['Account'],
+                        pull['user']['login']
+                    )
+                end,
+            }, function(_, idx)
+                if idx == nil then
                     return
                 end
-                table.sort(prs, function(a,b)
-                    return a["updated_at"] > b["updated_at"]
-                end)
-                vim.ui.select(
-                    prs,
-                    {
-                        prompt = 'Select a pull request to open: ',
-                        format_item = function(pull)
-                            return string.format([[%s%d | %s "%s" | %s %s]], config.icon_set["Number"], pull["number"], config.icon_set["GitPullRequest"], pull["title"], config.icon_set["Account"], pull["user"]["login"])
-                        end,
-                    },
-                    function(_, idx)
-                        if idx == nil then
-                            return
-                        end
-                        M.open_pull_by_number(prs[idx]["number"])
-                    end
-                )
+                M.open_pull_by_number(prs[idx]['number'])
             end)
-        end
-    )
+        end)
+    end)
 end
 
 function M.open_pull_request_reviewed_by_user()
     local repo = ghcli.get_repo_name_owner()
-    lib_notify.notify_popup_with_timeout("Searching for requested reviews.", 7500, "info")
+    lib_notify.notify_popup_with_timeout('Searching for requested reviews.', 7500, 'info')
 
-    ghcli.list_pulls_reviewed_by_user(repo["owner"]["login"], repo["name"], function(err, prs) 
+    ghcli.list_pulls_reviewed_by_user(repo['owner']['login'], repo['name'], function(err, prs)
         if err then
-            lib_notify.notify_popup_with_timeout("Failed to list PRs: " .. err, 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to list PRs: ' .. err, 7500, 'error')
             return
         end
-        table.sort(prs, function(a,b)
-            return a["updated_at"] > b["updated_at"]
+        table.sort(prs, function(a, b)
+            return a['updated_at'] > b['updated_at']
         end)
-        vim.ui.select(
-            prs,
-            {
-                prompt = 'Select a pull request to open:',
-                format_item = function(pull)
-                    return string.format([[%s%d | %s "%s" | %s %s]], config.icon_set["Number"], pull["number"], config.icon_set["GitPullRequest"], pull["title"], config.icon_set["Account"], pull["user"]["login"])
-                end,
-            },
-            function(_, idx)
-                if idx == nil then
-                    return
-                end
-                M.open_pull_by_number(prs[idx]["number"])
+        vim.ui.select(prs, {
+            prompt = 'Select a pull request to open:',
+            format_item = function(pull)
+                return string.format(
+                    [[%s%d | %s "%s" | %s %s]],
+                    config.icon_set['Number'],
+                    pull['number'],
+                    config.icon_set['GitPullRequest'],
+                    pull['title'],
+                    config.icon_set['Account'],
+                    pull['user']['login']
+                )
+            end,
+        }, function(_, idx)
+            if idx == nil then
+                return
             end
-        )
+            M.open_pull_by_number(prs[idx]['number'])
+        end)
     end)
 end
 
 function M.open_pull_requested_review_user()
     local repo = ghcli.get_repo_name_owner()
-    lib_notify.notify_popup_with_timeout("Searching for requested reviews.", 7500, "info")
+    lib_notify.notify_popup_with_timeout('Searching for requested reviews.', 7500, 'info')
 
-    ghcli.list_requested_reviews_user(repo["owner"]["login"], repo["name"], function(err, prs) 
+    ghcli.list_requested_reviews_user(repo['owner']['login'], repo['name'], function(err, prs)
         if err then
-            lib_notify.notify_popup_with_timeout("Failed to list PRs: " .. err, 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to list PRs: ' .. err, 7500, 'error')
             return
         end
-        table.sort(prs, function(a,b)
-            return a["updated_at"] > b["updated_at"]
+        table.sort(prs, function(a, b)
+            return a['updated_at'] > b['updated_at']
         end)
-        vim.ui.select(
-            prs,
-            {
-                prompt = 'Select a pull request to open:',
-                format_item = function(pull)
-                    return string.format([[%s%d | %s "%s" | %s %s]], config.icon_set["Number"], pull["number"], config.icon_set["GitPullRequest"], pull["title"], config.icon_set["Account"], pull["user"]["login"])
-                end,
-            },
-            function(_, idx)
-                if idx == nil then
-                    return
-                end
-                M.open_pull_by_number(prs[idx]["number"])
+        vim.ui.select(prs, {
+            prompt = 'Select a pull request to open:',
+            format_item = function(pull)
+                return string.format(
+                    [[%s%d | %s "%s" | %s %s]],
+                    config.icon_set['Number'],
+                    pull['number'],
+                    config.icon_set['GitPullRequest'],
+                    pull['title'],
+                    config.icon_set['Account'],
+                    pull['user']['login']
+                )
+            end,
+        }, function(_, idx)
+            if idx == nil then
+                return
             end
-        )
+            M.open_pull_by_number(prs[idx]['number'])
+        end)
     end)
 end
 
@@ -260,85 +280,77 @@ end
 -- once picked a new tab is created and the the pr details and commits are
 -- populated in a tree for this tab.
 function M.open_pull(args)
-    if args and args["args"] ~= "" then
-        M.open_pull_by_number(args["args"])
+    if args and args['args'] ~= '' then
+        M.open_pull_by_number(args['args'])
         return
     end
 
     local prs = ghcli.list_pulls()
     if prs == nil then
-        lib_notify.notify_popup_with_timeout("Failed to list PRs", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Failed to list PRs', 7500, 'error')
         return
     end
 
-    vim.ui.select(
-        prs,
-        {
-            prompt = 'Select a pull request to open:',
-            format_item = function(pull)
-                return string.format([[%s%d | %s "%s" | %s %s]], config.icon_set["Number"], pull["number"], config.icon_set["GitPullRequest"], pull["title"], config.icon_set["Account"], pull["author"]["login"])
-            end,
-        },
-        function(_, idx)
-            if idx == nil then
-                return
-            end
-            M.open_pull_by_number(prs[idx]["number"])
+    vim.ui.select(prs, {
+        prompt = 'Select a pull request to open:',
+        format_item = function(pull)
+            return string.format(
+                [[%s%d | %s "%s" | %s %s]],
+                config.icon_set['Number'],
+                pull['number'],
+                config.icon_set['GitPullRequest'],
+                pull['title'],
+                config.icon_set['Account'],
+                pull['author']['login']
+            )
+        end,
+    }, function(_, idx)
+        if idx == nil then
+            return
         end
-    )
+        M.open_pull_by_number(prs[idx]['number'])
+    end)
 end
 
 function M.open_to_pr()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.state["pr"] == nil
-    then
-        lib_notify.notify_popup_with_timeout("Open a pull request first with LTOpenPR.", 7500, "error")
+    if ctx.state == nil or ctx.state['pr'] == nil then
+        lib_notify.notify_popup_with_timeout('Open a pull request first with LTOpenPR.', 7500, 'error')
         return
     end
-    lib_panel.open_to("pr", ctx.state)
+    lib_panel.open_to('pr', ctx.state)
 end
 
 function M.popout_to_pr()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.state["pr"] == nil
-    then
-        lib_notify.notify_popup_with_timeout("Open a pull request first with LTOpenPR.", 7500, "error")
+    if ctx.state == nil or ctx.state['pr'] == nil then
+        lib_notify.notify_popup_with_timeout('Open a pull request first with LTOpenPR.', 7500, 'error')
     end
-    lib_panel.popout_to("pr", ctx.state)
+    lib_panel.popout_to('pr', ctx.state)
 end
 
 function M.open_to_pr_files()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.state["pr_files"] == nil
-    then
-        lib_notify.notify_popup_with_timeout("Open a pull request commit first.", 7500, "error")
+    if ctx.state == nil or ctx.state['pr_files'] == nil then
+        lib_notify.notify_popup_with_timeout('Open a pull request commit first.', 7500, 'error')
         return
     end
-    lib_panel.open_to("pr_files", ctx.state)
+    lib_panel.open_to('pr_files', ctx.state)
 end
 
 function M.popout_to_pr_files()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.state["pr_files"] == nil
-    then
-        lib_notify.notify_popup_with_timeout("Open a pull request commit first.", 7500, "error")
+    if ctx.state == nil or ctx.state['pr_files'] == nil then
+        lib_notify.notify_popup_with_timeout('Open a pull request commit first.', 7500, 'error')
     end
-    lib_panel.popout_to("pr_files", ctx.state)
+    lib_panel.popout_to('pr_files', ctx.state)
 end
 
 function M.clean()
     -- cleanup litee remotes
     local remotes = gitcli.list_remotes()
     for _, remote in ipairs(remotes) do
-        if vim.fn.match(remote, "litee-gh_") ~= -1 then
+        if vim.fn.match(remote, 'litee-gh_') ~= -1 then
             gitcli.remove_remote(remote)
         end
     end
@@ -356,23 +368,23 @@ function M.close_pr_commits()
         return
     end
     local state = lib_state.get_state(s.pull_state.tab)
-    if state == nil or state["pr_files"] == nil then
+    if state == nil or state['pr_files'] == nil then
         return
     end
-    if state["pr_files"].win ~= nil then
-        if vim.api.nvim_win_is_valid(state["pr_files"].win) then
-            vim.api.nvim_win_close(state["pr_files"].win, true)
+    if state['pr_files'].win ~= nil then
+        if vim.api.nvim_win_is_valid(state['pr_files'].win) then
+            vim.api.nvim_win_close(state['pr_files'].win, true)
         end
     end
-    if state["pr_files"].buf ~= nil then
-        if vim.api.nvim_buf_is_valid(state["pr_files"].buf) then
-            vim.api.nvim_buf_delete(state["pr_files"].buf, {force = true})
+    if state['pr_files'].buf ~= nil then
+        if vim.api.nvim_buf_is_valid(state['pr_files'].buf) then
+            vim.api.nvim_buf_delete(state['pr_files'].buf, { force = true })
         end
     end
-    if state["pr_files"].tree ~= nil then
-        lib_tree.remove_tree(state["pr_files"].tree)
+    if state['pr_files'].tree ~= nil then
+        lib_tree.remove_tree(state['pr_files'].tree)
     end
-    lib_state.put_component_state(s.pull_state.tab, "pr_files", nil)
+    lib_state.put_component_state(s.pull_state.tab, 'pr_files', nil)
     s.pull_state.last_opened_commit = nil
     -- write_trees(ui_req_ctx())
     M.clean()
@@ -384,23 +396,23 @@ function M.close_pr_review()
         return
     end
     local state = lib_state.get_state(s.pull_state.tab)
-    if state == nil or state["pr_review"] == nil then
+    if state == nil or state['pr_review'] == nil then
         return
     end
-    if state["pr_review"].win ~= nil then
-        if vim.api.nvim_win_is_valid(state["pr_review"].win) then
-            vim.api.nvim_win_close(state["pr_review"].win, true)
+    if state['pr_review'].win ~= nil then
+        if vim.api.nvim_win_is_valid(state['pr_review'].win) then
+            vim.api.nvim_win_close(state['pr_review'].win, true)
         end
     end
-    if state["pr_review"].buf ~= nil then
-        if vim.api.nvim_buf_is_valid(state["pr_review"].buf) then
-            vim.api.nvim_buf_delete(state["pr_review"].buf, {force = true})
+    if state['pr_review'].buf ~= nil then
+        if vim.api.nvim_buf_is_valid(state['pr_review'].buf) then
+            vim.api.nvim_buf_delete(state['pr_review'].buf, { force = true })
         end
     end
-    if state["pr_review"].tree ~= nil then
-        lib_tree.remove_tree(state["pr_review"].tree)
+    if state['pr_review'].tree ~= nil then
+        lib_tree.remove_tree(state['pr_review'].tree)
     end
-    lib_state.put_component_state(s.pull_state.tab, "pr_review", nil)
+    lib_state.put_component_state(s.pull_state.tab, 'pr_review', nil)
 end
 
 -- TODO add other stuff that needs to be done on pr close
@@ -412,18 +424,18 @@ function M.close_pull()
 
     -- dump all our state
     if state ~= nil then
-        if state["pr"].win ~= nil then
-            if vim.api.nvim_win_is_valid(state["pr"].win) then
-                vim.api.nvim_win_close(state["pr"].win, true)
+        if state['pr'].win ~= nil then
+            if vim.api.nvim_win_is_valid(state['pr'].win) then
+                vim.api.nvim_win_close(state['pr'].win, true)
             end
         end
-        if state["pr"].buf ~= nil then
-            if vim.api.nvim_buf_is_valid(state["pr"].buf) then
-                vim.api.nvim_buf_delete(state["pr"].buf, {force = true})
+        if state['pr'].buf ~= nil then
+            if vim.api.nvim_buf_is_valid(state['pr'].buf) then
+                vim.api.nvim_buf_delete(state['pr'].buf, { force = true })
             end
         end
-        if state["pr"].tree ~= nil then
-            lib_tree.remove_tree(state["pr"].tree)
+        if state['pr'].tree ~= nil then
+            lib_tree.remove_tree(state['pr'].tree)
         end
     end
 
@@ -431,10 +443,7 @@ function M.close_pull()
     M.close_pr_review()
 
     -- rip down our pull request tab if it exists
-    if
-        s.pull_state.tab ~= nil and
-        vim.api.nvim_tabpage_is_valid(s.pull_state.tab) 
-    then
+    if s.pull_state.tab ~= nil and vim.api.nvim_tabpage_is_valid(s.pull_state.tab) then
         if vim.api.nvim_tabpage_is_valid(s.pull_state.tab) then
             local other_tab = nil
             local tabs = vim.api.nvim_list_tabpages()
@@ -445,182 +454,149 @@ function M.close_pull()
                 end
             end
             if other_tab == nil then
-                vim.cmd("tabnew")
+                vim.cmd('tabnew')
             end
             vim.api.nvim_set_current_tabpage(s.pull_state.tab)
-            vim.cmd("tabclose")
+            vim.cmd('tabclose')
         end
-        lib_state.put_component_state(s.pull_state.tab, "pr", nil)
+        lib_state.put_component_state(s.pull_state.tab, 'pr', nil)
     end
 
     -- nil our the pull state
     s.pull_state = nil
 end
 
-
 function M.hide_pr()
     local ctx = ui_req_ctx()
-    if ctx.tree_type ~= "pr" then
+    if ctx.tree_type ~= 'pr' then
         return
     end
-    if ctx.state["pr"].win ~= nil then
-        if vim.api.nvim_win_is_valid(ctx.state["pr"].win) then
-            vim.api.nvim_win_close(ctx.state["pr"].win, true)
+    if ctx.state['pr'].win ~= nil then
+        if vim.api.nvim_win_is_valid(ctx.state['pr'].win) then
+            vim.api.nvim_win_close(ctx.state['pr'].win, true)
         end
     end
-    if vim.api.nvim_win_is_valid(ctx.state["pr"].invoking_win) then
-        vim.api.nvim_set_current_win(ctx.state["pr"].invoking_win)
+    if vim.api.nvim_win_is_valid(ctx.state['pr'].invoking_win) then
+        vim.api.nvim_set_current_win(ctx.state['pr'].invoking_win)
     end
 end
 
 function M.hide_pr_commit()
     local ctx = ui_req_ctx()
-    if ctx.tree_type ~= "pr_files" then
+    if ctx.tree_type ~= 'pr_files' then
         return
     end
-    if ctx.state["pr_files"].win ~= nil then
-        if vim.api.nvim_win_is_valid(ctx.state["pr_files"].win) then
-            vim.api.nvim_win_close(ctx.state["pr_files"].win, true)
+    if ctx.state['pr_files'].win ~= nil then
+        if vim.api.nvim_win_is_valid(ctx.state['pr_files'].win) then
+            vim.api.nvim_win_close(ctx.state['pr_files'].win, true)
         end
     end
-    if vim.api.nvim_win_is_valid(ctx.state["pr_files"].invoking_win) then
-        vim.api.nvim_set_current_win(ctx.state["pr_files"].invoking_win)
+    if vim.api.nvim_win_is_valid(ctx.state['pr_files'].invoking_win) then
+        vim.api.nvim_set_current_win(ctx.state['pr_files'].invoking_win)
     end
 end
 
 function M.hide_pr_review()
     local ctx = ui_req_ctx()
-    if ctx.tree_type ~= "pr_review" then
+    if ctx.tree_type ~= 'pr_review' then
         return
     end
-    if ctx.state["pr_review"].win ~= nil then
-        if vim.api.nvim_win_is_valid(ctx.state["pr_review"].win) then
-            vim.api.nvim_win_close(ctx.state["pr_review"].win, true)
+    if ctx.state['pr_review'].win ~= nil then
+        if vim.api.nvim_win_is_valid(ctx.state['pr_review'].win) then
+            vim.api.nvim_win_close(ctx.state['pr_review'].win, true)
         end
     end
-    if vim.api.nvim_win_is_valid(ctx.state["pr_review"].invoking_win) then
-        vim.api.nvim_set_current_win(ctx.state["pr_review"].invoking_win)
+    if vim.api.nvim_win_is_valid(ctx.state['pr_review'].invoking_win) then
+        vim.api.nvim_set_current_win(ctx.state['pr_review'].invoking_win)
     end
 end
 
 function M.collapse_pr()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.pr_cursor == nil or
-        ctx.state["pr"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request before starting a review.", 7500, "error")
+    if ctx.state == nil or ctx.pr_cursor == nil or ctx.state['pr'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request before starting a review.', 7500, 'error')
         return
     end
     local node = ctx.pr_node
     node.expanded = false
-    lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr"].buf,
-        ctx.state["pr"].tree,
-        marshaler.marshal_pr_node
-    )
-    vim.api.nvim_win_set_cursor(ctx.state["pr"].win, ctx.pr_cursor)
+    lib_tree.write_tree_no_guide_leaf(ctx.state['pr'].buf, ctx.state['pr'].tree, marshaler.marshal_pr_node)
+    vim.api.nvim_win_set_cursor(ctx.state['pr'].win, ctx.pr_cursor)
 end
 
 function M.expand_pr()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.pr_cursor == nil or
-        ctx.state["pr"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request before starting a review.", 7500, "error")
+    if ctx.state == nil or ctx.pr_cursor == nil or ctx.state['pr'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request before starting a review.', 7500, 'error')
         return
     end
     local node = ctx.pr_node
     node.expanded = true
-    lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr"].buf,
-        ctx.state["pr"].tree,
-        marshaler.marshal_pr_node
-    )
-    vim.api.nvim_win_set_cursor(ctx.state["pr"].win, ctx.pr_cursor)
+    lib_tree.write_tree_no_guide_leaf(ctx.state['pr'].buf, ctx.state['pr'].tree, marshaler.marshal_pr_node)
+    vim.api.nvim_win_set_cursor(ctx.state['pr'].win, ctx.pr_cursor)
 end
 
 function M.collapse_pr_commits()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.files_cursor == nil or
-        ctx.state["pr_files"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request commit first.", 7500, "error")
+    if ctx.state == nil or ctx.files_cursor == nil or ctx.state['pr_files'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request commit first.', 7500, 'error')
         return
     end
     local node = ctx.files_node
     node.expanded = false
     lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr_files"].buf,
-        ctx.state["pr_files"].tree,
+        ctx.state['pr_files'].buf,
+        ctx.state['pr_files'].tree,
         marshaler.marshal_pr_file_node
     )
-    vim.api.nvim_win_set_cursor(ctx.state["pr_files"].win, ctx.files_cursor)
+    vim.api.nvim_win_set_cursor(ctx.state['pr_files'].win, ctx.files_cursor)
 end
 
 function M.expand_pr_commits()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.files_cursor == nil or
-        ctx.state["pr_files"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request commit first.", 7500, "error")
+    if ctx.state == nil or ctx.files_cursor == nil or ctx.state['pr_files'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request commit first.', 7500, 'error')
         return
     end
     local node = ctx.files_node
     node.expanded = true
     lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr_files"].buf,
-        ctx.state["pr_files"].tree,
+        ctx.state['pr_files'].buf,
+        ctx.state['pr_files'].tree,
         marshaler.marshal_pr_file_node
     )
-    vim.api.nvim_win_set_cursor(ctx.state["pr_files"].win, ctx.files_cursor)
+    vim.api.nvim_win_set_cursor(ctx.state['pr_files'].win, ctx.files_cursor)
 end
 
 function M.collapse_pr_review()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.review_cursor == nil or
-        ctx.state["pr_review"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request commit before starting a review.", 7500, "error")
+    if ctx.state == nil or ctx.review_cursor == nil or ctx.state['pr_review'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request commit before starting a review.', 7500, 'error')
         return
     end
     local node = ctx.review_node
     node.expanded = false
     lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr_review"].buf,
-        ctx.state["pr_review"].tree,
+        ctx.state['pr_review'].buf,
+        ctx.state['pr_review'].tree,
         marshaler.marshal_pr_file_node
     )
-    vim.api.nvim_win_set_cursor(ctx.state["pr_review"].win, ctx.review_cursor)
+    vim.api.nvim_win_set_cursor(ctx.state['pr_review'].win, ctx.review_cursor)
 end
 
 function M.expand_pr_review()
     local ctx = ui_req_ctx()
-    if
-        ctx.state == nil or
-        ctx.review_cursor == nil or
-        ctx.state["pr_review"].tree == nil
-    then
-        lib_notify.notify_popup_with_timeout("Must open a pull request commit before starting a review.", 7500, "error")
+    if ctx.state == nil or ctx.review_cursor == nil or ctx.state['pr_review'].tree == nil then
+        lib_notify.notify_popup_with_timeout('Must open a pull request commit before starting a review.', 7500, 'error')
         return
     end
     local node = ctx.review_node
     node.expanded = true
     lib_tree.write_tree_no_guide_leaf(
-        ctx.state["pr_review"].buf,
-        ctx.state["pr_review"].tree,
+        ctx.state['pr_review'].buf,
+        ctx.state['pr_review'].tree,
         marshaler.marshal_pr_file_node
     )
-    vim.api.nvim_win_set_cursor(ctx.state["pr_review"].win, ctx.review_cursor)
+    vim.api.nvim_win_set_cursor(ctx.state['pr_review'].win, ctx.review_cursor)
 end
 
 -- open_commit will open a commit inside the "pull request commits" litee panel.
@@ -630,18 +606,18 @@ end
 function M.open_commit()
     local ctx = ui_req_ctx()
     if
-        ctx.state == nil or
-        ctx.state["pr"] == nil or
-        ctx.state["pr"].tree == nil or
-        ctx.commits_node == nil or
-        ctx.commits_node.commit == nil
+        ctx.state == nil
+        or ctx.state['pr'] == nil
+        or ctx.state['pr'].tree == nil
+        or ctx.commits_node == nil
+        or ctx.commits_node.commit == nil
     then
         return
     end
 
     -- root of pr is the pr object holding the commits.
     local commit = ctx.commits_node.commit
-    handlers.commits_handler(commit["sha"])
+    handlers.commits_handler(commit['sha'])
 end
 
 -- open_file will open a particular edited file from an opened commit.
@@ -652,26 +628,26 @@ end
 function M.open_file()
     local ctx = ui_req_ctx()
     if
-        ctx.state == nil or
-        ctx.state["pr_files"] == nil or
-        ctx.state["pr_files"].tree == nil or
-        ctx.files_node == nil
+        ctx.state == nil
+        or ctx.state['pr_files'] == nil
+        or ctx.state['pr_files'].tree == nil
+        or ctx.files_node == nil
     then
         return
     end
 
     -- root of pr_files tree is the commit object holding the edited files.
-    local commit = lib_tree.get_tree(ctx.state["pr_files"].tree).root.commit
+    local commit = lib_tree.get_tree(ctx.state['pr_files'].tree).root.commit
     local file = ctx.files_node.file
-    diff_view.open_diffsplit(commit,file)
+    diff_view.open_diffsplit(commit, file)
     if ctx.files_cursor ~= nil then
-        vim.api.nvim_win_set_cursor(ctx.state["pr_files"].win, ctx.files_cursor)
+        vim.api.nvim_win_set_cursor(ctx.state['pr_files'].win, ctx.files_cursor)
     end
 end
 
 function M.start_review()
     if s.pull_state == nil then
-        lib_notify.notify_popup_with_timeout("Must open a pull request before starting a review.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Must open a pull request before starting a review.', 7500, 'error')
         return
     end
 
@@ -684,24 +660,21 @@ function M.start_review()
 
     local review = ghcli.create_review(s.pull_state.number, commit)
     s.pull_state.review = review
-    vim.cmd("GHRefreshPR")
+    vim.cmd('GHRefreshPR')
 end
 
 function M.delete_review()
-    if
-        s.pull_state == nil or
-        s.pull_state.review == nil
-    then
+    if s.pull_state == nil or s.pull_state.review == nil then
         return
     end
-    local out = ghcli.delete_review(s.pull_state.number, s.pull_state.review["id"])
+    local out = ghcli.delete_review(s.pull_state.number, s.pull_state.review['id'])
     if out == nil then
-        lib_notify.notify_popup_with_timeout("Failed to delete pending review.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Failed to delete pending review.', 7500, 'error')
         return
     end
     s.pull_state.review = nil
     -- refresh pr, any pending comments in the review will be removed.
-    vim.cmd("GHRefreshPR")
+    vim.cmd('GHRefreshPR')
 end
 
 function M.submit_review()
@@ -709,7 +682,7 @@ function M.submit_review()
         return
     end
     if s.pull_state.review == nil then
-        lib_notify.notify_popup_with_timeout("No review in progress.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('No review in progress.', 7500, 'error')
         return
     end
 
@@ -719,46 +692,36 @@ function M.submit_review()
         local actions = {
             'APPROVE',
             'REQUEST_CHANGES',
-            'COMMENT'
+            'COMMENT',
         }
         if body ~= nil then
             body = vim.fn.shellescape(body)
         end
-        local out = ghcli.submit_review(s.pull_state["number"], s.pull_state.review["id"], body, actions[action])
+        local out = ghcli.submit_review(s.pull_state['number'], s.pull_state.review['id'], body, actions[action])
         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to submit review", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to submit review', 7500, 'error')
             return
         end
-        vim.cmd("GHRefreshPR")
+        vim.cmd('GHRefreshPR')
     end
 
-    vim.ui.select(
-        {"approve", "request changes", "comment"},
-        {prompt="Select a submit action: "},
-        function(_, idx)
-            action = idx
-            vim.ui.select(
-                {"yes", "no"},
-                {prompt="Include a comment with this review? "},
-                function(_, comment)
-                    if comment == 1 then
-                        vim.ui.input(
-                            {prompt = "Enter review submit comment: "},
-                            function(input)
-                                cb(action, input)
-                            end
-                        )
-                    else
-                        cb(action, nil)
-                    end
-                end
-            )
+    vim.ui.select({ 'approve', 'request changes', 'comment' }, { prompt = 'Select a submit action: ' }, function(_, idx)
+        action = idx
+        vim.ui.select({ 'yes', 'no' }, { prompt = 'Include a comment with this review? ' }, function(_, comment)
+            if comment == 1 then
+                vim.ui.input({ prompt = 'Enter review submit comment: ' }, function(input)
+                    cb(action, input)
+                end)
+            else
+                cb(action, nil)
+            end
         end)
+    end)
 end
 
 function M.immediately_approve_review()
     if s.pull_state == nil then
-        lib_notify.notify_popup_with_timeout("Must open a pull request before starting a review.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Must open a pull request before starting a review.', 7500, 'error')
         return
     end
     local review = ghcli.create_review(s.pull_state.number, s.pull_state.head)
@@ -767,30 +730,23 @@ function M.immediately_approve_review()
         if body ~= nil then
             body = vim.fn.shellescape(body)
         end
-        local out = ghcli.submit_review(s.pull_state["number"], review["id"], body, "APPROVE")
+        local out = ghcli.submit_review(s.pull_state['number'], review['id'], body, 'APPROVE')
         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to approve review", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to approve review', 7500, 'error')
             return
         end
-        vim.cmd("GHRefreshPR")
+        vim.cmd('GHRefreshPR')
     end
 
-    vim.ui.select(
-        {"yes", "no"},
-        {prompt="Include a comment with this review? "},
-        function(_, comment)
-            if comment == 1 then
-                vim.ui.input(
-                    {prompt = "Enter review submit comment: "},
-                    function(input)
-                        cb(input)
-                    end
-                )
-            else
-                cb(nil)
-            end
+    vim.ui.select({ 'yes', 'no' }, { prompt = 'Include a comment with this review? ' }, function(_, comment)
+        if comment == 1 then
+            vim.ui.input({ prompt = 'Enter review submit comment: ' }, function(input)
+                cb(input)
+            end)
+        else
+            cb(nil)
         end
-    )
+    end)
 end
 
 function M.test_thread()
@@ -806,44 +762,44 @@ end
 
 local function open_pr_node(ctx, node)
     if node.pr ~= nil then
-        issues.open_issue_by_number(node.pr["number"])
+        issues.open_issue_by_number(node.pr['number'])
     end
     if node.commit ~= nil then
-        handlers.commits_handler(node.commit["sha"])
+        handlers.commits_handler(node.commit['sha'])
     end
     if node.thread ~= nil then
-        local root_comment = node["children"][1]["comment"]
-        local sha = root_comment["commit"]["oid"]
-        -- set refresh to true so diff_view is not opened, we'll open it 
+        local root_comment = node['children'][1]['comment']
+        local sha = root_comment['commit']['oid']
+        -- set refresh to true so diff_view is not opened, we'll open it
         -- more specifically below
         handlers.commits_handler(sha, true)
         local commit = s.pull_state.commits_by_sha[sha]
-        local file = s.pull_state.files_by_name[node.thread["path"]]
+        local file = s.pull_state.files_by_name[node.thread['path']]
         diff_view.open_diffsplit(commit, file, node.thread, true)
     end
     if node.comment ~= nil then
-        local thread = s.pull_state.review_threads_by_id[node.comment["thread_id"]]
-        local root_comment = thread["children"][1]["comment"]
-        local sha = root_comment["commit"]["oid"]
-        -- set refresh to true so diff_view is not opened, we'll open it 
+        local thread = s.pull_state.review_threads_by_id[node.comment['thread_id']]
+        local root_comment = thread['children'][1]['comment']
+        local sha = root_comment['commit']['oid']
+        -- set refresh to true so diff_view is not opened, we'll open it
         -- more specifically below
         handlers.commits_handler(sha, true)
 
         local commit = s.pull_state.commits_by_sha[sha]
-        local file = s.pull_state.files_by_name[thread.thread["path"]]
+        local file = s.pull_state.files_by_name[thread.thread['path']]
         diff_view.open_diffsplit(commit, file, thread.thread, true)
     end
     if node.review ~= nil then
-        handlers.review_handler(node.review["node_id"])
+        handlers.review_handler(node.review['node_id'])
         return
     end
     if node.file ~= nil then
         -- if we are opening a file from the aggregated file view in the pr tree,
         -- checkout head.
         M.close_pr_commits()
-        local out = gitcli.checkout(nil, s.pull_state["head"])
+        local out = gitcli.checkout(nil, s.pull_state['head'])
         if out == nil then
-           lib_notify.notify_popup_with_timeout("Failed to checkout HEAD.", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to checkout HEAD.', 7500, 'error')
         end
         diff_view.open_diffsplit(s.pull_state.commits[#s.pull_state.commits], node.file, nil, true)
     end
@@ -860,7 +816,7 @@ end
 
 function M.open_pr_buffer()
     if s.pull_state == nil then
-        lib_notify.notify_popup_with_timeout("Must open a pull request with GHOpenPR first.", 7500, "error")
+        lib_notify.notify_popup_with_timeout('Must open a pull request with GHOpenPR first.', 7500, 'error')
         return
     end
     issues.open_issue_by_number(s.pull_state.number)
@@ -868,41 +824,41 @@ end
 
 local function open_pr_files_node(ctx, node)
     if node.commit ~= nil then
-        commits.open_commit_by_sha(node.commit["sha"])
+        commits.open_commit_by_sha(node.commit['sha'])
     end
     if node.file ~= nil then
-        local tree = lib_tree.get_tree(ctx.state["pr_files"].tree)
+        local tree = lib_tree.get_tree(ctx.state['pr_files'].tree)
         local commit = tree.root.commit
         diff_view.open_diffsplit(commit, node.file)
     end
     if node.thread ~= nil then
-        local tree = lib_tree.get_tree(ctx.state["pr_files"].tree)
+        local tree = lib_tree.get_tree(ctx.state['pr_files'].tree)
         local commit = tree.root.commit
         -- try to use the file object directly from the commit we have opened.
         local file = nil
-        for _, f in ipairs(commit["files"]) do
-            if f.filename == node.thread["path"] then
+        for _, f in ipairs(commit['files']) do
+            if f.filename == node.thread['path'] then
                 file = f
             end
         end
         if file == nil then
-            file = s.pull_state.files_by_name[node.thread["path"]]
+            file = s.pull_state.files_by_name[node.thread['path']]
         end
         diff_view.open_diffsplit(commit, file, node.thread)
     end
     if node.comment ~= nil then
-        local thread = s.pull_state.review_threads_by_id[node.comment["thread_id"]]
-        local tree = lib_tree.get_tree(ctx.state["pr_files"].tree)
+        local thread = s.pull_state.review_threads_by_id[node.comment['thread_id']]
+        local tree = lib_tree.get_tree(ctx.state['pr_files'].tree)
         local commit = tree.root.commit
         -- try to use the file object directly from the commit we have opened.
         local file = nil
-        for _, f in ipairs(commit["files"]) do
-            if f.filename == thread.thread["path"] then
+        for _, f in ipairs(commit['files']) do
+            if f.filename == thread.thread['path'] then
                 file = f
             end
         end
         if file == nil then
-            file = s.pull_state.files_by_name[thread.thread["path"]]
+            file = s.pull_state.files_by_name[thread.thread['path']]
         end
         diff_view.open_diffsplit(commit, file, thread.thread)
     end
@@ -910,26 +866,26 @@ end
 
 local function open_pr_review_node(ctx, node)
     if node.thread ~= nil then
-         -- checkout head if we are opening a thread from "Conversations:" tree.
-         local out = gitcli.checkout(nil, s.pull_state.head)
-         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to checkout head.", 7500, "error")
-         end
+        -- checkout head if we are opening a thread from "Conversations:" tree.
+        local out = gitcli.checkout(nil, s.pull_state.head)
+        if out == nil then
+            lib_notify.notify_popup_with_timeout('Failed to checkout head.', 7500, 'error')
+        end
 
         local commit = s.pull_state.commits_by_sha[s.pull_state.head]
-        local file = s.pull_state.files_by_name[node.thread["path"]]
+        local file = s.pull_state.files_by_name[node.thread['path']]
         diff_view.open_diffsplit(commit, file, node.thread)
     end
     if node.comment ~= nil then
-         -- checkout head if we are opening a thread from "Conversations:" tree.
+        -- checkout head if we are opening a thread from "Conversations:" tree.
         local out = gitcli.checkout(nil, s.pull_state.head)
         if out == nil then
-            lib_notify.notify_popup_with_timeout("Failed to checkout head.", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to checkout head.', 7500, 'error')
         end
 
-        local thread = s.pull_state.review_threads_by_id[node.comment["thread_id"]]
+        local thread = s.pull_state.review_threads_by_id[node.comment['thread_id']]
         local commit = s.pull_state.commits_by_sha[s.pull_state.head]
-        local file = s.pull_state.files_by_name[thread.thread["path"]]
+        local file = s.pull_state.files_by_name[thread.thread['path']]
         diff_view.open_diffsplit(commit, file, thread.thread)
     end
 end
@@ -976,7 +932,7 @@ function M.open_node_pr()
         open_pr_node(ctx, ctx.pr_node)
         remove_notifications(ctx, ctx.pr_node)
     end
-    lib_util.safe_cursor_reset(ctx.state["pr"].win, ctx.pr_cursor)
+    lib_util.safe_cursor_reset(ctx.state['pr'].win, ctx.pr_cursor)
 end
 
 function M.open_node_files()
@@ -985,7 +941,7 @@ function M.open_node_files()
         open_pr_files_node(ctx, ctx.files_node)
         remove_notifications(ctx, ctx.files_node)
     end
-    lib_util.safe_cursor_reset(ctx.state["pr_files"].win, ctx.files_cursor)
+    lib_util.safe_cursor_reset(ctx.state['pr_files'].win, ctx.files_cursor)
 end
 
 function M.open_node_review()
@@ -994,7 +950,7 @@ function M.open_node_review()
         open_pr_review_node(ctx, ctx.review_node)
         remove_notifications(ctx, ctx.review_node)
     end
-    lib_util.safe_cursor_reset(ctx.state["pr_review"].win, ctx.review_cursor)
+    lib_util.safe_cursor_reset(ctx.state['pr_review'].win, ctx.review_cursor)
 end
 
 function M.open_node_url()
@@ -1002,15 +958,15 @@ function M.open_node_url()
     if ctx.tree_type == nil then
         return
     end
-    if ctx.tree_type == "pr" then
+    if ctx.tree_type == 'pr' then
         open_nodes_url(ctx.pr_node)
         return
     end
-    if ctx.tree_type == "pr_files" then
+    if ctx.tree_type == 'pr_files' then
         open_nodes_url(ctx.files_node)
         return
     end
-    if ctx.tree_type == "pr_review" then
+    if ctx.tree_type == 'pr_review' then
         open_nodes_url(ctx.review_node)
         return
     end
@@ -1022,27 +978,29 @@ function M.add_label()
     end
     ghcli.list_labels_async(function(err, data)
         if err then
-            vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to list labels: " .. err, 7500, "error") end)
+            vim.schedule(function()
+                lib_notify.notify_popup_with_timeout('Failed to list labels: ' .. err, 7500, 'error')
+            end)
             return
         end
-        vim.schedule(function() vim.ui.select(
-            data,
-            {
-                prompt = "Select a label to add ",
+        vim.schedule(function()
+            vim.ui.select(data, {
+                prompt = 'Select a label to add ',
                 format_item = function(item)
-                    return string.format("%s - %s", item["name"], item["description"])
-                end
-            },
-            function(choice)
-                ghcli.add_label_async(s.pull_state["number"], choice["name"], function(err, data)
+                    return string.format('%s - %s', item['name'], item['description'])
+                end,
+            }, function(choice)
+                ghcli.add_label_async(s.pull_state['number'], choice['name'], function(err, data)
                     if err then
-                        vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to add label: " .. err, 7500, "error") end)
+                        vim.schedule(function()
+                            lib_notify.notify_popup_with_timeout('Failed to add label: ' .. err, 7500, 'error')
+                        end)
                         return
                     end
                     handlers.on_refresh()
                 end)
-            end
-        )end)
+            end)
+        end)
     end)
 end
 
@@ -1050,22 +1008,21 @@ function M.remove_label()
     if s.pull_state == nil then
         return
     end
-    vim.ui.select(
-        s.pull_state.pr_raw["labels"],
-        {
-            prompt = "Select a label to remove ",
-            format_item = function(item)
-                return string.format("%s - %s", item["name"], item["description"])
+    vim.ui.select(s.pull_state.pr_raw['labels'], {
+        prompt = 'Select a label to remove ',
+        format_item = function(item)
+            return string.format('%s - %s', item['name'], item['description'])
+        end,
+    }, function(choice)
+        ghcli.remove_label_async(s.pull_state['number'], choice['name'], function(err, data)
+            if err then
+                vim.schedule(function()
+                    lib_notify.notify_popup_with_timeout('Failed to remove label: ' .. err, 7500, 'error')
+                end)
+                return
             end
-        },
-        function(choice)
-            ghcli.remove_label_async(s.pull_state["number"], choice["name"], function(err, data)
-                if err then
-                    vim.schedule(function () lib_notify.notify_popup_with_timeout("Failed to remove label: " .. err, 7500, "error") end)
-                    return
-                end
-                handlers.on_refresh()
-            end)
+            handlers.on_refresh()
+        end)
     end)
 end
 

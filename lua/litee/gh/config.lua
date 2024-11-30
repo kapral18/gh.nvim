@@ -2,13 +2,13 @@ local M = {}
 
 M.config = {
     -- deprecated, around for compatability for now.
-    jump_mode   = "invoking",
+    jump_mode = 'invoking',
     -- remap the arrow keys to resize any litee.nvim windows.
     map_resize_keys = false,
     -- do not map any keys inside any gh.nvim buffers.
     disable_keymaps = false,
     -- the icon set to use.
-    icon_set = "default",
+    icon_set = 'default',
     -- any custom icons to use.
     icon_set_custom = nil,
     -- whether to register the @username and #issue_number omnifunc completion
@@ -23,8 +23,8 @@ M.config = {
         -- buffers.
         -- you can alternate between two highlights if desired by setting these
         -- to different highlights.
-        thread_separator = "GHThreadSep",
-        thread_separator_alt = "GHThreadSepAlt"
+        thread_separator = 'GHThreadSep',
+        thread_separator_alt = 'GHThreadSepAlt',
     },
     -- extra arguments: if a list is provided it is added to all the commands
     -- if a table with string indices is provided the actual subcommand will be looked up
@@ -39,34 +39,34 @@ M.config = {
         -- when inside a gh.nvim panel, this key will open a node if it has
         -- any futher functionality. for example, hitting <CR> on a commit node
         -- will open the commit's changed files in a new gh.nvim panel.
-        open = "<CR>",
+        open = '<CR>',
         -- when inside a gh.nvim panel, expand a collapsed node
-        expand = "zo",
+        expand = 'zo',
         -- when inside a gh.nvim panel, collpased and expanded node
-        collapse = "zc",
+        collapse = 'zc',
         -- when cursor is over a "#1234" formatted issue or PR, open its details
         -- and comments in a new tab.
-        goto_issue = "gd",
+        goto_issue = 'gd',
         -- show any details about a node, typically, this reveals commit messages
         -- and submitted review bodys.
-        details = "d",
+        details = 'd',
         -- inside a convo buffer, submit a comment
-        submit_comment = "<C-s>",
+        submit_comment = '<C-s>',
         -- inside a convo buffer, when your cursor is ontop of a comment, open
         -- up a set of actions that can be performed.
-        actions = "<C-a>",
+        actions = '<C-a>',
         -- inside a thread convo buffer, resolve the thread.
-        resolve_thread = "<C-r>",
+        resolve_thread = '<C-r>',
         -- inside a gh.nvim panel, if possible, open the node's web URL in your
         -- browser. useful particularily for digging into external failed CI
         -- checks.
-        goto_web = "gx",
+        goto_web = 'gx',
         -- if selectable, select the object under the cursor for additional operations.
-        select = "<leader>",
+        select = '<leader>',
         -- if selectable, clear all selected items.
-        clear_selection = "<leader><leader>",
+        clear_selection = '<leader><leader>',
         -- toggle unread items
-        toggle_unread = "u"
+        toggle_unread = 'u',
     },
 }
 

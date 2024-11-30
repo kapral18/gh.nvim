@@ -4,15 +4,15 @@ local M = {}
 
 function M.build_conversation_tree(depth)
     local root = lib_tree_node.new_node(
-        "Conversations:",
-        "Conversations:",
+        'Conversations:',
+        'Conversations:',
         depth -- we a subtree of root
     )
     root.expanded = true
     root.details = {
         name = root.name,
-        detail = "",
-        icon = ""
+        detail = '',
+        icon = '',
     }
 end
 
@@ -20,19 +20,15 @@ function M.build_issue_comment_nodes(comments, depth)
     local nodes = {}
     local comments_by_id = {}
 
-    comments = comments["data"]["repository"]["pullRequest"]["comments"]["edges"]
+    comments = comments['data']['repository']['pullRequest']['comments']['edges']
 
     for _, c in ipairs(comments) do
-        c = c["node"]
-        local comment = lib_tree_node.new_node(
-            c["id"],
-            c["id"],
-            depth
-        )
+        c = c['node']
+        local comment = lib_tree_node.new_node(c['id'], c['id'], depth)
         comment.expanded = true
         comment.issue_comment = c
         table.insert(nodes, comment)
-        comments_by_id[c["id"]] = comment
+        comments_by_id[c['id']] = comment
     end
     return nodes, comments_by_id
 end
@@ -44,56 +40,48 @@ function M.build_review_thread_trees(threads, depth)
     local threads_by_filename = {}
     local thread_comments_by_id = {}
 
-    threads = threads["data"]["repository"]["pullRequest"]["reviewThreads"]["edges"]
+    threads = threads['data']['repository']['pullRequest']['reviewThreads']['edges']
 
     for _, t in ipairs(threads) do
-        t = t["node"]
+        t = t['node']
 
         -- get the root comment, it will tell us if this thread is part of a
         -- review.
-        local root_comment_raw = t["comments"]["edges"][1]["node"]
+        local root_comment_raw = t['comments']['edges'][1]['node']
 
         local effective_depth = depth
         -- create our thread
-        local thread = lib_tree_node.new_node(
-            t["id"],
-            t["id"],
-            effective_depth
-        )
+        local thread = lib_tree_node.new_node(t['id'], t['id'], effective_depth)
         thread.thread = t
 
-        if thread.thread["isResolved"] then
+        if thread.thread['isResolved'] then
             thread.expanded = false
         else
             thread.expanded = true
         end
 
-        if root_comment_raw["pullRequestReview"] ~= nil then
-            thread.thread["review_id"] = root_comment_raw["pullRequestReview"]["id"]
+        if root_comment_raw['pullRequestReview'] ~= nil then
+            thread.thread['review_id'] = root_comment_raw['pullRequestReview']['id']
         end
 
         -- add thread to book keeping maps
-        threads_by_id[t["id"]] = thread
-        if threads_by_filename[t["path"]] == nil then
-            threads_by_filename[t["path"]] = {}
+        threads_by_id[t['id']] = thread
+        if threads_by_filename[t['path']] == nil then
+            threads_by_filename[t['path']] = {}
         end
-        table.insert(threads_by_filename[t["path"]], thread)
+        table.insert(threads_by_filename[t['path']], thread)
 
         -- parse out comments
         local comments = {}
-        for _, c in ipairs(t["comments"]["edges"]) do
-            c = c["node"]
-            local comment = lib_tree_node.new_node(
-                c["id"],
-                c["id"],
-                effective_depth+1
-            )
+        for _, c in ipairs(t['comments']['edges']) do
+            c = c['node']
+            local comment = lib_tree_node.new_node(c['id'], c['id'], effective_depth + 1)
             comment.comment = c
-            comment.comment["thread_id"] = t["id"]
-            comment.url = c["url"]
+            comment.comment['thread_id'] = t['id']
+            comment.url = c['url']
             comment.expanded = true
             table.insert(comments, comment)
-            thread_comments_by_id[c["id"]] = comment
+            thread_comments_by_id[c['id']] = comment
         end
 
         for _, c in ipairs(comments) do

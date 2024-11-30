@@ -6,14 +6,14 @@ function M.build_checks_tree(checks, depth, prev_tree)
     local prev_root = nil
     if prev_tree ~= nil and prev_tree.depth_table[depth] ~= nil then
         for _, prev_node in ipairs(prev_tree.depth_table[depth]) do
-            if prev_node.key == "Checks:" then
+            if prev_node.key == 'Checks:' then
                 prev_root = prev_node
             end
         end
     end
     local root = lib_tree_node.new_node(
-        "Checks:",
-        "Checks:",
+        'Checks:',
+        'Checks:',
         depth -- we a subtree of root
     )
     root.expanded = true
@@ -22,23 +22,23 @@ function M.build_checks_tree(checks, depth, prev_tree)
     end
     root.details = {
         name = root.name,
-        detail = "",
-        icon = ""
+        detail = '',
+        icon = '',
     }
 
     for _, check in ipairs(checks) do
         local c_node = lib_tree_node.new_node(
-            check["name"],
-            check["id"],
-            depth+1 -- we are a child to the root details node created above, selfsame for all following.
+            check['name'],
+            check['id'],
+            depth + 1 -- we are a child to the root details node created above, selfsame for all following.
         )
         c_node.check = check
         c_node.expanded = true
-        c_node.url = check["html_url"]
+        c_node.url = check['html_url']
         table.insert(root.children, c_node)
     end
 
-    table.sort(root.children, function(a,b)
+    table.sort(root.children, function(a, b)
         return a.name < b.name
     end)
 
@@ -46,4 +46,3 @@ function M.build_checks_tree(checks, depth, prev_tree)
 end
 
 return M
-

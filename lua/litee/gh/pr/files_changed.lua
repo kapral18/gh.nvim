@@ -1,5 +1,5 @@
 local lib_path = require('litee.lib.util.path')
-local config   = require('litee.gh.config')
+local config = require('litee.gh.config')
 
 local lib_tree_node = require('litee.lib.tree.node')
 
@@ -16,21 +16,21 @@ function M.build_files_changed_tree(files, depth, prev_tree)
     local prev_root = nil
     if prev_tree ~= nil and prev_tree.depth_table[depth] ~= nil then
         for _, prev_node in ipairs(prev_tree.depth_table[depth]) do
-            if prev_node.key == "Details:" then
+            if prev_node.key == 'Details:' then
                 prev_root = prev_node
             end
         end
     end
 
     local root = lib_tree_node.new_node(
-        "Files changed:",
-        "Files changed:",
+        'Files changed:',
+        'Files changed:',
         depth -- we a subtree of root
     )
     root.details = {
         name = root.name,
-        detail = "",
-        icon = ""
+        detail = '',
+        icon = '',
     }
 
     root.expanded = true
@@ -53,7 +53,7 @@ function M.build_files_changed_tree(files, depth, prev_tree)
     end
 
     local function recursive_mkdir(path)
-        if path == "" or path == "/" then
+        if path == '' or path == '/' then
             return root
         end
 
@@ -67,15 +67,11 @@ function M.build_files_changed_tree(files, depth, prev_tree)
         end
 
         -- create directory node, add it to parent's children, and return it
-        local dir = lib_tree_node.new_node(
-            path,
-            path,
-            n.depth + 1
-        )
+        local dir = lib_tree_node.new_node(path, path, n.depth + 1)
         dir.details = {
             name = lib_path.basename(path),
-            detail = "",
-            icon = config.icon_set["Folder"]
+            detail = '',
+            icon = config.icon_set['Folder'],
         }
         dir.changed_file_dir = true
         if dir.depth == 2 then
@@ -83,8 +79,8 @@ function M.build_files_changed_tree(files, depth, prev_tree)
         else
             dir.expanded = true
         end
-        if prev_tree ~= nil and prev_tree.depth_table[n.depth+1] ~= nil then
-            for _, prev in ipairs(prev_tree.depth_table[n.depth+1]) do
+        if prev_tree ~= nil and prev_tree.depth_table[n.depth + 1] ~= nil then
+            for _, prev in ipairs(prev_tree.depth_table[n.depth + 1]) do
                 if prev.key == dir.key then
                     dir.expanded = prev.expanded
                 end
@@ -98,17 +94,13 @@ function M.build_files_changed_tree(files, depth, prev_tree)
 
     for _, filename in pairs(sorted_filenames) do
         local file = files[filename]
-        local dir = lib_path.parent_dir(file["filename"])
+        local dir = lib_path.parent_dir(file['filename'])
         local dir_node = recursive_mkdir(dir)
 
-        local child_node = lib_tree_node.new_node(
-            file["filename"],
-            file["filename"],
-            dir_node.depth+1
-        )
+        local child_node = lib_tree_node.new_node(file['filename'], file['filename'], dir_node.depth + 1)
         child_node.file = file
         child_node.expanded = true
-        child_node.url = file["blob_url"]
+        child_node.url = file['blob_url']
         table.insert(dir_node.children, child_node)
     end
 

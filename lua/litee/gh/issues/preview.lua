@@ -1,25 +1,25 @@
-local lib_notify    = require('litee.lib.notify')
+local lib_notify = require('litee.lib.notify')
 
-local ghcli         = require('litee.gh.ghcli')
-local config        = require('litee.gh.config')
+local ghcli = require('litee.gh.ghcli')
+local config = require('litee.gh.config')
 
 local M = {}
 
 local symbols = {
-    top =    "╭",
-    left =   "│",
-    bottom = "╰",
-    tab = "  ",
+    top = '╭',
+    left = '│',
+    bottom = '╰',
+    tab = '  ',
 }
 
 function M.preview_issue(number)
     ghcli.get_issue_async(number, function(err, issue_data)
         if err then
-            lib_notify.notify_popup_with_timeout("Failed to fetch issue: " .. err, 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to fetch issue: ' .. err, 7500, 'error')
             return
         end
         if issue_data == nil then
-            lib_notify.notify_popup_with_timeout("Failed to fetch issue.", 7500, "error")
+            lib_notify.notify_popup_with_timeout('Failed to fetch issue.', 7500, 'error')
             return
         end
         local buf = M.render_issue(issue_data)
@@ -33,25 +33,21 @@ function M.preview_issue(number)
             line_count = i
         end
 
-        local popup_conf = vim.lsp.util.make_floating_popup_options(
-                width,
-                line_count,
-                {
-                    border= "rounded",
-                    focusable= false,
-                    zindex = 99,
-                    relative = "cursor"
-                }
-        )
+        local popup_conf = vim.lsp.util.make_floating_popup_options(width, line_count, {
+            border = 'rounded',
+            focusable = false,
+            zindex = 99,
+            relative = 'cursor',
+        })
         local cur_win = vim.api.nvim_get_current_win()
         local win = vim.api.nvim_open_win(buf, false, popup_conf)
 
         -- some win options for displaying the header info
         vim.api.nvim_win_set_option(win, 'wrap', true)
         vim.api.nvim_win_set_option(win, 'winhighlight', 'NonText:Normal')
-        vim.api.nvim_win_set_option(win, "showbreak", "│")
+        vim.api.nvim_win_set_option(win, 'showbreak', '│')
 
-        local id = vim.api.nvim_create_autocmd({"CursorMoved"}, {
+        local id = vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
             buffer = vim.api.nvim_win_get_buf(cur_win),
             callback = function()
                 if vim.api.nvim_win_is_valid(win) then
@@ -66,9 +62,9 @@ local function parse_comment_body(body, left_sign)
     local lines = {}
     body = vim.fn.split(body, '\n')
     for _, line in ipairs(body) do
-        line = vim.fn.substitute(line, "\r", "", "g")
-        line = vim.fn.substitute(line, "\n", "", "g")
-        line = vim.fn.substitute(line, "\t", symbols.tab, "g")
+        line = vim.fn.substitute(line, '\r', '', 'g')
+        line = vim.fn.substitute(line, '\n', '', 'g')
+        line = vim.fn.substitute(line, '\t', symbols.tab, 'g')
         if left_sign then
             line = symbols.left .. line
         end
@@ -82,26 +78,48 @@ function M.render_issue(issue)
 
     local buffer_lines = {}
 
-    local type = ""
-    if vim.fn.match(issue["node_id"], "PR_") ~= -1 then
-        type = "Pull Request"
+    local type = ''
+    if vim.fn.match(issue['node_id'], 'PR_') ~= -1 then
+        type = 'Pull Request'
     else
-        type = "Issue"
+        type = 'Issue'
     end
-    table.insert(buffer_lines, string.format("%s %s  %s %s%s", symbols.top, config.icon_set["GitIssue"], type, config.icon_set["Number"], issue["number"]))
-    table.insert(buffer_lines, string.format("%s %s  Author: %s", symbols.left, config.icon_set["Account"], issue["user"]["login"]))
-    table.insert(buffer_lines, string.format("%s %s  Created: %s", symbols.left, config.icon_set["Calendar"], issue["created_at"]))
-    table.insert(buffer_lines, string.format("%s %s  Last Updated: %s", symbols.left, config.icon_set["Calendar"], issue["updated_at"]))
-    table.insert(buffer_lines, string.format("%s %s  Title: %s", symbols.left, config.icon_set["Pencil"], issue["title"]))
-    table.insert(buffer_lines, string.format("%s %s  State: %s", symbols.left, config.icon_set["Info"], issue["state"]))
+    table.insert(
+        buffer_lines,
+        string.format(
+            '%s %s  %s %s%s',
+            symbols.top,
+            config.icon_set['GitIssue'],
+            type,
+            config.icon_set['Number'],
+            issue['number']
+        )
+    )
+    table.insert(
+        buffer_lines,
+        string.format('%s %s  Author: %s', symbols.left, config.icon_set['Account'], issue['user']['login'])
+    )
+    table.insert(
+        buffer_lines,
+        string.format('%s %s  Created: %s', symbols.left, config.icon_set['Calendar'], issue['created_at'])
+    )
+    table.insert(
+        buffer_lines,
+        string.format('%s %s  Last Updated: %s', symbols.left, config.icon_set['Calendar'], issue['updated_at'])
+    )
+    table.insert(
+        buffer_lines,
+        string.format('%s %s  Title: %s', symbols.left, config.icon_set['Pencil'], issue['title'])
+    )
+    table.insert(buffer_lines, string.format('%s %s  State: %s', symbols.left, config.icon_set['Info'], issue['state']))
     table.insert(buffer_lines, symbols.left)
-    local body_lines = parse_comment_body(issue["body"], true)
+    local body_lines = parse_comment_body(issue['body'], true)
     for _, l in ipairs(body_lines) do
         table.insert(buffer_lines, l)
     end
     table.insert(buffer_lines, symbols.left)
     table.insert(buffer_lines, symbols.bottom)
-    table.insert(buffer_lines, "")
+    table.insert(buffer_lines, '')
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
     vim.api.nvim_buf_set_lines(buf, 0, #buffer_lines, false, buffer_lines)
