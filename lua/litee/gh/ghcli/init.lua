@@ -280,7 +280,7 @@ end
 -- search_pulls accepts a query string which is appended to a hard coded query
 -- string of "q=repo:{owner}/{name} type=pr".
 function M.search_pulls(owner, name, qq, on_read)
-    local q = string.format('q=repo:%s/%s type:pr ', owner, name)
+    local q = string.format('q=repo:%s/%s is:open type:pr ', owner, name)
     if qq ~= nil then
         q = q .. qq
     end
