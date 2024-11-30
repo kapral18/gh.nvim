@@ -79,7 +79,6 @@ query($name: String!, $owner: String!, $number: Int!) {
           node {
             author {
               login
-              
             }
             authorAssociation
             body
@@ -126,7 +125,6 @@ query($name: String!, $owner: String!, $number: Int!, $cursor: String!) {
           node {
             author {
               login
-              
             }
             authorAssociation
             body

@@ -1,6 +1,5 @@
 local lib_notify = require('litee.lib.notify')
 local lib_util = require('litee.lib.util')
-local lib_path = require('litee.lib.util.path')
 
 local ghcli = require('litee.gh.ghcli')
 local s = require('litee.gh.pr.state')
@@ -42,36 +41,6 @@ end
 local symbols = {
     tab = '  ',
 }
-
--- parse out the line range and whether its a multiline comment associated
--- with the provided thread.
-local function extract_thread_lines(thread)
-    local start_line = nil
-    local end_line = nil
-    local multiline = false
-    if thread.thread['originalLine'] ~= vim.NIL then
-        start_line = thread.thread['originalStartLine']
-        end_line = thread.thread['originalLine']
-        if start_line == vim.NIL then
-            start_line = end_line
-        else
-            multiline = true
-            end_line = end_line
-        end
-        return { start_line - 1, end_line, multiline }
-    elseif thread.thread['line'] ~= vim.NIL then
-        start_line = thread.thread['startLine']
-        end_line = thread.thread['line']
-        if start_line == vim.NIL then
-            start_line = end_line
-        else
-            multiline = true
-            end_line = end_line
-        end
-        return { start_line - 1, end_line, multiline }
-    end
-    return nil
-end
 
 -- extract rest_id from comment, you can get this from the last portion
 -- of url.
@@ -143,7 +112,7 @@ local function setup_buffer(thread_id)
     vim.api.nvim_buf_set_option(state.buf, 'swapfile', false)
     vim.api.nvim_buf_set_option(state.buf, 'textwidth', 0)
     vim.api.nvim_buf_set_option(state.buf, 'wrapmargin', 0)
-    vim.api.nvim_buf_set_option(state.buf, 'ofu', 'v:lua.GH_completion')
+    vim.api.nvim_buf_set_option(state.buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
 
     vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.submit_comment, '', { callback = M.submit })
     vim.api.nvim_buf_set_keymap(
@@ -825,12 +794,8 @@ function M.reaction()
                 comment.comment['id'],
                 reactions.reaction_names[idx],
                 vim.schedule_wrap(function(err, data)
-                    if err then
-                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                        return
-                    end
-                    if data == nil then
-                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
+                    if err or data == nil then
+                        lib_notify.notify_popup_with_timeout('Failed to remove reaction.', 7500, 'error')
                         return
                     end
                     vim.cmd('GHRefreshComments')
@@ -841,11 +806,7 @@ function M.reaction()
                 comment.comment['id'],
                 reactions.reaction_names[idx],
                 vim.schedule_wrap(function(err, data)
-                    if err then
-                        lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                        return
-                    end
-                    if data == nil then
+                    if err or data == nil then
                         lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                         return
                     end

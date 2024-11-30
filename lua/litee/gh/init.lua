@@ -196,7 +196,7 @@ local function register_git_buffer_completion()
     vim.api.nvim_create_autocmd({ "BufEnter" }, {
         pattern = { "*.git/*" },
         callback = function(args)
-            vim.api.nvim_buf_set_option(args.buf, 'ofu', 'v:lua.GH_completion')
+            vim.api.nvim_buf_set_option(args.buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
         end
     })
     vim.api.nvim_create_autocmd({ "CursorHold" }, {

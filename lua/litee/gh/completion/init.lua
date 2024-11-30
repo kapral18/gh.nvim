@@ -26,9 +26,13 @@ local function fill_issue_cache()
     end)
 end
 
--- global lua function which can be used as omnifunc like:
--- vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.GH_completion')
-function GH_completion(start, base)
+-- This function is called by the completion plugin to provide completions for
+-- vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
+--
+---@param start number
+---@param base string
+---@return table | number
+function M.completion(start, base)
     -- opportunistic async refresh, may not load the item we want this time, but
     -- will on a retry.
     fill_contributor_cache()

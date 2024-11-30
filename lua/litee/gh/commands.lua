@@ -10,8 +10,6 @@ local M = {}
 local commands = {
     -- use a vim.ui.select prompt to open one of the first 100 pull requests.
     { name = 'GHOpenPR', callback = pr.open_pull, opts = { nargs = '?' } },
-    -- use a vim.ui.select prompt to open one of the first 100 pull requests.
-    { name = 'GHOpenPR', callback = pr.open_pull, opts = { nargs = '?' } },
     -- open the Pull Request panel in the side bar panel
     { name = 'GHOpenToPR', callback = pr.open_to_pr, opts = {} },
     -- open the Pull Request panel in a pop out window
@@ -113,6 +111,7 @@ local commands = {
     { name = 'GHOpenDebugBuffer', callback = debug.open_debug_buffer, opts = {} },
 }
 
+--- Selects a GH command from a UI select prompt.
 function M.command_select()
     vim.ui.select(commands, {
         prompt = 'Select a GH command: ',
@@ -127,6 +126,7 @@ function M.command_select()
     end)
 end
 
+--- Sets up the GH commands by registering them with Neovim.
 function M.setup()
     -- register all commands
     for _, cmd in ipairs(commands) do

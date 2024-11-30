@@ -150,7 +150,7 @@ local function setup_buffer(number)
     vim.api.nvim_buf_set_option(buf, 'swapfile', false)
     vim.api.nvim_buf_set_option(buf, 'textwidth', 0)
     vim.api.nvim_buf_set_option(buf, 'wrapmargin', 0)
-    vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.GH_completion')
+    vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
 
     vim.api.nvim_buf_set_keymap(buf, 'n', config.config.keymaps.submit_comment, '', { callback = M.submit })
     vim.api.nvim_buf_set_keymap(buf, 'n', config.config.keymaps.actions, '', { callback = M.comment_actions })
@@ -633,10 +633,8 @@ function M.reaction()
         local emoji_to_set = reactions.reaction_map[item]
         ghcli.get_issue_comment_reactions_async(comment['id'], function(err, data)
             if err then
-                if err then
-                    lib_notify.notify_popup_with_timeout('Failed to get comment reactions.', 7500, 'error')
-                    return
-                end
+                lib_notify.notify_popup_with_timeout('Failed to get comment reactions.', 7500, 'error')
+                return
             end
             local reaction_exists = false
             for _, reaction in ipairs(data) do
@@ -652,11 +650,7 @@ function M.reaction()
                     comment['node_id'],
                     reactions.reaction_names[idx],
                     vim.schedule_wrap(function(err, data)
-                        if err then
-                            lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                            return
-                        end
-                        if data == nil then
+                        if err or data == nil then
                             lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                             return
                         end
@@ -668,11 +662,7 @@ function M.reaction()
                     comment['node_id'],
                     reactions.reaction_names[idx],
                     vim.schedule_wrap(function(err, data)
-                        if err then
-                            lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                            return
-                        end
-                        if data == nil then
+                        if err or data == nil then
                             lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                             return
                         end

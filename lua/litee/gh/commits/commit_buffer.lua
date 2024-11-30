@@ -15,6 +15,7 @@ local symbols = {
 M.state_by_sha = {}
 M.state_by_buf = {}
 
+---@brief Refreshes all commits by reloading and re-rendering them.
 function M.on_refresh()
     for sha, _ in pairs(M.state_by_sha) do
         M.load_commit(sha, function()
@@ -23,6 +24,8 @@ function M.on_refresh()
     end
 end
 
+---@brief Creates a new commit state.
+---@return table
 local function new_commit_state()
     return {
         -- the buffer id where the pr buffer is rendered
@@ -47,8 +50,8 @@ local function new_commit_state()
     }
 end
 
--- comment_under_cursor uses the mapped extmarks to extract the comment under
--- the user's cursor.
+---@brief Retrieves the comment under the cursor.
+---@return table|nil
 local function comment_under_cursor()
     local state = M.state_by_buf[vim.api.nvim_get_current_buf()]
     if state == nil then
@@ -66,8 +69,9 @@ local function comment_under_cursor()
     return comment
 end
 
--- load_commit will asynchronously load the commit identified by its sha with
--- on_load() once done.
+---@brief Asynchronously loads a commit and calls on_load when done.
+---@param sha string Commit SHA to load.
+---@param on_load function Callback function after loading.
 function M.load_commit(sha, on_load)
     ghcli.get_commit_async(sha, function(err, commit_data)
         if err then
@@ -101,6 +105,7 @@ function M.load_commit(sha, on_load)
     end)
 end
 
+---@brief Sets window settings.
 local function _win_settings_on()
     vim.api.nvim_win_set_option(0, 'winhighlight', 'NonText:Normal')
     vim.api.nvim_win_set_option(0, 'wrap', true)
@@ -108,6 +113,9 @@ local function _win_settings_on()
     vim.api.nvim_win_set_option(0, 'cursorline', false)
 end
 
+---@brief Checks if the cursor is in the editable area.
+---@param state table
+---@return boolean
 local function in_editable_area(state)
     local cursor = vim.api.nvim_win_get_cursor(0)
     if state.text_area_off == nil then
@@ -120,7 +128,9 @@ local function in_editable_area(state)
     end
 end
 
--- load_commit must be called before a buffer can be setup for the commit.
+---@brief Sets up the buffer for a commit.
+---@param sha string Commit SHA.
+---@return number|nil Buffer ID.
 local function setup_buffer(sha)
     if M.state_by_sha[sha] == nil then
         return nil
@@ -143,7 +153,7 @@ local function setup_buffer(sha)
     vim.api.nvim_buf_set_option(buf, 'swapfile', false)
     vim.api.nvim_buf_set_option(buf, 'textwidth', 0)
     vim.api.nvim_buf_set_option(buf, 'wrapmargin', 0)
-    vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.GH_completion')
+    vim.api.nvim_buf_set_option(buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
 
     vim.api.nvim_buf_set_keymap(buf, 'n', config.config.keymaps.submit_comment, '', { callback = M.submit })
     vim.api.nvim_buf_set_keymap(buf, 'n', config.config.keymaps.actions, '', { callback = M.comment_actions })
@@ -178,6 +188,10 @@ local function setup_buffer(sha)
     return buf
 end
 
+---@brief Parses the comment body.
+---@param body string
+---@param left_sign boolean
+---@return table
 local function parse_comment_body(body, left_sign)
     local lines = {}
     body = vim.fn.split(body, '\n')
@@ -193,6 +207,9 @@ local function parse_comment_body(body, left_sign)
     return lines
 end
 
+---@brief Maps reactions to a string.
+---@param comment table
+---@return string
 local function map_reactions(comment)
     local reaction_string = ''
     for text, count in pairs(comment.reactions) do
@@ -208,6 +225,9 @@ local function map_reactions(comment)
     return reaction_string
 end
 
+---@brief Renders a comment.
+---@param comment table
+---@return table
 local function render_comment(comment)
     local lines = {}
     local reaction_string = map_reactions(comment)
@@ -227,6 +247,9 @@ local function render_comment(comment)
     return lines
 end
 
+---@brief Restores the draft comment.
+---@param state table
+---@return function
 local function restore_draft(state)
     -- get cursor to restore if possible
     local cursor = nil
@@ -277,8 +300,9 @@ local function restore_draft(state)
     end
 end
 
--- render_commit will return a buffer of the commit and set the commit state's
--- buffer field
+---@brief Renders a commit.
+---@param sha string Commit SHA.
+---@return number|nil Buffer ID.
 function M.render_commit(sha)
     local state = M.state_by_sha[sha]
     if state == nil then
@@ -387,6 +411,9 @@ function M.render_commit(sha)
     return buf
 end
 
+---@brief Extracts text from the buffer.
+---@param state table
+---@return string, table
 local function extract_text(state)
     -- extract text from text area
     local lines = vim.api.nvim_buf_get_lines(state.buf, state.text_area_off, -1, false)
@@ -396,6 +423,10 @@ local function extract_text(state)
     return body, lines
 end
 
+---@brief Creates a commit comment.
+---@param state table
+---@param body string
+---@return table|nil
 local function create(state, body)
     local out = ghcli.create_commit_comment(state.commit['sha'], body)
     if out == nil then
@@ -404,8 +435,10 @@ local function create(state, body)
     return out
 end
 
--- update will update the text of the comment present in state.editing_comment
--- and then reset that field to nil.
+---@brief Updates an existing commit comment.
+---@param state table
+---@param body string
+---@return table|nil
 local function update(state, body)
     local out = ghcli.update_commit_comment(state.editing_comment['id'], body)
     if out == nil then
@@ -414,6 +447,7 @@ local function update(state, body)
     return out
 end
 
+---@brief Initiates editing of a comment.
 function M.edit_comment()
     local state = M.state_by_buf[vim.api.nvim_get_current_buf()]
     if state == nil then
@@ -456,6 +490,7 @@ function M.edit_comment()
     vim.api.nvim_win_set_cursor(0, { state.text_area_off + #lines - 1, 0 })
 end
 
+---@brief Deletes a comment.
 function M.delete_comment()
     local comment = comment_under_cursor()
     if comment == nil then
@@ -474,6 +509,7 @@ function M.delete_comment()
     end)
 end
 
+---@brief Submits a comment.
 function M.submit()
     local state = M.state_by_buf[vim.api.nvim_get_current_buf()]
     if state == nil then
@@ -506,6 +542,7 @@ function M.submit()
     M.on_refresh()
 end
 
+---@brief Adds a reaction to a comment.
 function M.reaction()
     local comment = comment_under_cursor()
     if comment == nil then
@@ -527,10 +564,8 @@ function M.reaction()
         local emoji_to_set = reactions.reaction_map[item]
         ghcli.get_commit_reactions_async(comment['id'], function(err, data)
             if err then
-                if err then
-                    lib_notify.notify_popup_with_timeout('Failed to get comment reactions.', 7500, 'error')
-                    return
-                end
+                lib_notify.notify_popup_with_timeout('Failed to get comment reactions.', 7500, 'error')
+                return
             end
             local reaction_exists = false
             for _, reaction in ipairs(data) do
@@ -546,12 +581,8 @@ function M.reaction()
                     comment['node_id'],
                     reactions.reaction_names[idx],
                     vim.schedule_wrap(function(err, data)
-                        if err then
-                            lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                            return
-                        end
-                        if data == nil then
-                            lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
+                        if err or data == nil then
+                            lib_notify.notify_popup_with_timeout('Failed to remove reaction.', 7500, 'error')
                             return
                         end
                         M.on_refresh()
@@ -562,11 +593,7 @@ function M.reaction()
                     comment['node_id'],
                     reactions.reaction_names[idx],
                     vim.schedule_wrap(function(err, data)
-                        if err then
-                            lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
-                            return
-                        end
-                        if data == nil then
+                        if err or data == nil then
                             lib_notify.notify_popup_with_timeout('Failed to add reaction.', 7500, 'error')
                             return
                         end
@@ -578,6 +605,7 @@ function M.reaction()
     end)
 end
 
+---@brief Presents comment actions to the user.
 function M.comment_actions()
     local state = M.state_by_buf[vim.api.nvim_get_current_buf()]
     if state == nil then
@@ -591,12 +619,11 @@ function M.comment_actions()
 
     vim.ui.select(
         { 'edit', 'delete', 'react' },
-        { prompt = 'Pick a action to perform on this comment: ' },
+        { prompt = 'Pick an action to perform on this comment: ' },
         function(item, _)
             if item == nil then
                 return
             end
-            -- if it has a number field, its the comment is actuall the pr
             if item == 'edit' then
                 M.edit_comment()
                 return
@@ -613,6 +640,9 @@ function M.comment_actions()
     )
 end
 
+---@brief Sets the modifiable state of a buffer.
+---@param bool boolean
+---@param buf number|nil
 function M.set_modifiable(bool, buf)
     if buf ~= nil and vim.api.nvim_buf_is_valid(buf) then
         vim.api.nvim_buf_set_option(buf, 'modifiable', bool)

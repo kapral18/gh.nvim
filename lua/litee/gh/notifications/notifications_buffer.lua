@@ -89,7 +89,7 @@ local function setup_buffer()
     vim.api.nvim_buf_set_option(state.buf, 'swapfile', false)
     vim.api.nvim_buf_set_option(state.buf, 'textwidth', 0)
     vim.api.nvim_buf_set_option(state.buf, 'wrapmargin', 0)
-    vim.api.nvim_buf_set_option(state.buf, 'ofu', 'v:lua.GH_completion')
+    vim.api.nvim_buf_set_option(state.buf, 'ofu', 'v:lua.require"litee.gh.completion".completion')
 
     vim.api.nvim_buf_set_keymap(state.buf, 'n', config.config.keymaps.open, '', { callback = M.open_notification })
     vim.api.nvim_buf_set_keymap(
